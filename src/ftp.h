@@ -39,10 +39,10 @@ extern int extralog;
 extern int bindport;
 extern int daemonmode;
 
+extern int printerror(int rc, char *type, char *format, ...);
 extern int acceptloop(int sock);
 
 #define	FTPMAXBSIZE		4096
-
 
 typedef struct _config {
     char	configfile[200];
@@ -187,6 +187,9 @@ extern int readconfig(config_t *config, char *filename, char *section);
 extern int printconfig(config_t *config);
 
 extern int proxy_request(config_t *config);
+
+extern char *getstatusvar(char *varname);
+extern int setstatusvar(char *state, char *varname, char *format, ...);
 
 #endif
 

@@ -2,7 +2,24 @@
 ** Notice: Version 1.0.2 - 1.0.6 and 1.0.9 - 1.1.1 were never released
            to the public.
 
-Version 1.2.3
+Version 1.2.4
+- --------------------------------
+
+  * Fixed bug in waitpid handling in daemon mode again. #10008
+    Mentioned by Simon Baatz
+
+  * Reworked logging:
+
+      - If running in debug mode ftp.proxy will write it's messages 
+	hat went formerly to syslog to stderr now.
+
+      - When ftp.proxy terminates succesfully or with an error it will
+	log a status line beginning with either `+OK:' or `-ERR:'
+	followed by session specific information like FTP client, server
+	and user
+
+
+Version 1.2.3 - 30072004asg
 - --------------------------------
 
   * Fixed bug in waitpid handling in daemon mode.

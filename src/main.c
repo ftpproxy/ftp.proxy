@@ -65,7 +65,86 @@ int	daemonmode =		0;
 
 int	showconfig =		0;
 
-extern int acceptloop(int sock);
+
+
+
+static char *varprefix = "PROXY_";
+
+char *getstatusvar(char *varname)
+{
+	char	var[80], *val;
+
+	snprintf (var, sizeof(var) - 2, "%s%s", varprefix, varname);
+	if ((val = getenv(var)) == NULL  ||  *val == 0)
+		val = "-";
+
+	return (val);
+}
+
+int setstatusvar(char *state, char *varname, char *format, ...)
+{
+        char    var[80], val[1024];
+        va_list ap;
+
+	if (varname != NULL  &&  *varname != 0) {
+		va_start(ap, format);
+		vsnprintf (val, sizeof(val) - 2, format, ap);
+		va_end(ap);
+
+		snprintf (var, sizeof(var) - 2, "%s%s", varprefix, varname);
+		setenv(var, val, 1);
+		}
+
+	if (state != NULL  &&  *state != 0) {
+		snprintf (var, sizeof(var) - 2, "%sSESSIONSTATE", varprefix);
+		setenv(var, state, 1);
+		}
+
+	return (0);
+}
+
+char *getstatusline(char *status)
+{
+	static char line[1024];
+
+	snprintf (line, sizeof(line) - 2, "interface= %s, state= %s, client= %s, server= %s, user= %s, status= %s",
+				getstatusvar("INTERFACE"), getstatusvar("SESSIONSTATE"),
+				getstatusvar("CLIENT"), getstatusvar("SERVER"), getstatusvar("USER"),
+				status);
+	return (line);
+}
+
+
+
+
+int printerror(int rc, char *type, char *format, ...)
+{
+        char    *p, tag[30], error[1024];
+        va_list ap;
+
+        va_start(ap, format);
+        vsnprintf (error, sizeof(error) - 2, format, ap);
+        va_end(ap);
+
+	*tag = 0;
+	if (*type != 0)
+		snprintf (tag, sizeof(tag) - 2, "%s: ", type);
+
+	p = error;
+	if (rc != 0)
+		p = getstatusline(error);
+
+        if (debug != 0)
+                fprintf (stderr, "%s: %s%s\n", program, tag, p);
+        else
+                syslog(LOG_NOTICE, "%s%s", tag, p);
+
+        if (rc != 0)
+                exit (rc);
+
+        return (0);
+}
+
 
 
 void missing_arg(int c, char *string)
@@ -289,7 +368,7 @@ int main(int argc, char *argv[], char *envp[])
 
 
 	if (*config->configfile != 0) {
-		syslog(LOG_NOTICE, "configured to use config file. %s", p);
+/*		syslog(LOG_NOTICE, "configured to use config file: %s", p); */
 		readconfig(config, config->configfile, "");
 		}
 
@@ -302,10 +381,12 @@ int main(int argc, char *argv[], char *envp[])
 			sock = bind_to_port("", bindport);
 			acceptloop(sock);
 			}
+
 		signal(SIGCHLD, SIG_DFL);
 		}	
 
 	proxy_request(config);
+
 	exit (0);
 }
 

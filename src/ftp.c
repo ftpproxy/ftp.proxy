@@ -121,8 +121,8 @@ unsigned get_interface_info(int pfd, char *ip, int max)
 
 	size = sizeof(saddr);
 	if (getsockname(pfd, (struct sockaddr *) &saddr, &size) < 0) {
-		syslog(LOG_NOTICE, "-ERR: can't get interface info: %s", strerror(errno));
-		exit (-1);
+		printerror(1, "-ERR", "can't get interface info: %s", strerror(errno));
+		exit (1);
 		}
 
 	copy_string(ip, (char *) inet_ntoa(saddr.sin_addr), max);
@@ -192,7 +192,7 @@ int getc_fd(ftp_t *x, int fd)
 	else if (fd == x->fd.server)
 		bio = &x->sbuf;
 	else {
-		syslog(LOG_NOTICE, "-ERR: internal bio/fd error");
+		printerror(1, "-ERR", "internal bio/fd error");
 		exit (1);
 		}
 
@@ -227,8 +227,8 @@ int getc_fd(ftp_t *x, int fd)
 				x->ch.active = x->ch.isock;
 				}
 			else {
-				syslog(LOG_NOTICE, "-ERR: internal mode error");
-				exit (-1);
+				printerror(1, "-ERR", "internal mode error");
+				exit (1);
 				}
 			}
 		else if (x->ch.state == PORT_CONNECTED  &&  x->ch.seen150 == 1) {
@@ -249,11 +249,11 @@ int getc_fd(ftp_t *x, int fd)
 
 			rc = select(max + 1, &available, (fd_set *) NULL, (fd_set *) NULL, &tov);
 			if (rc < 0) {
-				syslog(LOG_NOTICE, "select() error: %s\n", strerror(errno));
+				printerror(0, "", "select() error: %s\n", strerror(errno));
 				break;
 				}
 			else if (rc == 0) {
-				syslog(LOG_NOTICE, "connection timed out: client= %s, server= %s:%u",
+				printerror(0, "", "connection timed out: client= %s, server= %s:%u",
 					x->client, x->server.name, x->server.port);
 				return (-1);
 				}
@@ -284,7 +284,7 @@ int getc_fd(ftp_t *x, int fd)
 						fprintf (stderr, "accept() on socket\n");
 
 					if (sock < 0) {
-						syslog(LOG_NOTICE, "-ERR: accept error: %s", strerror(errno));
+						printerror(1, "-ERR", "accept error: %s", strerror(errno));
 						exit (1);
 						}
 					else {
@@ -303,7 +303,7 @@ int getc_fd(ftp_t *x, int fd)
 								if (x->config->allow_anyremote != 0)
 									/* configuration tells us not to care -- 31JAN02asg */ ;
 								else {
-									syslog(LOG_NOTICE, "-ERR: unexpected connect: %s, expected= %s", remote, x->server.ipnum);
+									printerror(1, "-ERR", "unexpected connect: %s, expected= %s", remote, x->server.ipnum);
 									exit (1);
 									}
 								}
@@ -313,7 +313,7 @@ int getc_fd(ftp_t *x, int fd)
 								if (x->config->allow_anyremote != 0)
 									/* ok -- 31JAN02asg */ ;
 								else {
-									syslog(LOG_NOTICE, "-ERR: unexpected connect: %s, expected= %s", remote, x->client_ip);
+									printerror(1, "-ERR", "unexpected connect: %s, expected= %s", remote, x->client_ip);
 									exit (1);
 									}
 								}
@@ -332,7 +332,7 @@ int getc_fd(ftp_t *x, int fd)
 							fprintf (stderr, "osock= %d\n", x->ch.osock);
 
 						if ((x->ch.isock = openip(x->ch.client.ipnum, x->ch.client.port, x->interface, x->config->dataport)) < 0) {
-							syslog(LOG_NOTICE, "-ERR: can't connect to client: %s", strerror(errno));
+							printerror(1, "-ERR", "can't connect to client: %s", strerror(errno));
 							exit (1);
 							}
 
@@ -347,7 +347,7 @@ int getc_fd(ftp_t *x, int fd)
 							fprintf (stderr, "isock= %d\n", x->ch.isock);
 
 						if ((x->ch.osock = openip(x->ch.server.ipnum, x->ch.server.port, x->config->sourceip, 0)) < 0) {
-							syslog(LOG_NOTICE, "-ERR: can't connect to server: %s", strerror(errno));
+							printerror(1, "-ERR", "can't connect to server: %s", strerror(errno));
 							exit (1);
 							}
 
@@ -369,7 +369,7 @@ int getc_fd(ftp_t *x, int fd)
 						x->ch.other  = x->ch.osock;
 						}
 					else {
-						syslog(LOG_NOTICE, "-ERR: transfer operation error");
+						printerror(1, "-ERR", "transfer operation error");
 						exit (1);
 						}
 
@@ -412,7 +412,7 @@ int getc_fd(ftp_t *x, int fd)
 					if (x->ch.operation == 0) {
 						if (earlyreported == 0) {
 							earlyreported = 1;
-							syslog(LOG_NOTICE, "early write/read event, sleeping 2 seconds");
+							printerror(0, "", "early write/read event, sleeping 2 seconds");
 							sleep(2);
 							continue;
 							}
@@ -429,7 +429,7 @@ int getc_fd(ftp_t *x, int fd)
 						x->ch.bytes += bytes;
 					else {
 						if (wrote < 0)
-							syslog(LOG_NOTICE, "error writing data channel, error= %s", strerror(errno));
+							printerror(0, "", "error writing data channel, error= %s", strerror(errno));
 
 						if (debug)
 							fprintf (stderr, "closing data connection\n");
@@ -561,7 +561,7 @@ int sfputs(ftp_t *x, char *format, ...)
 	 */
 
 	if (write(x->fd.server, buffer, len) != len) {
-		syslog(LOG_NOTICE, "-ERR: error writing control connect, error= %s", strerror(errno));
+		printerror(1, "-ERR", "error writing control connect, error= %s", strerror(errno));
 		exit (1);
 		}
 
@@ -603,7 +603,7 @@ int sfputc(ftp_t *x, char *command, char *parameter, char *line, int size, char 
 	if (line[3] != ' '  &&  line[3] != 0) {
         	while (1) {
                 	if (sfgets(x, line, size) == NULL) {
-				syslog(LOG_NOTICE, "-ERR: lost server while reading client greeting: %s", x->server.name);
+				printerror(1, "-ERR", "lost server while reading client greeting: %s", x->server.name);
 				exit (1);
 				}
 
@@ -632,10 +632,10 @@ int doquit(ftp_t *x)
 	char	resp[200];
 
 	if ((rc = sfputc(x, "QUIT", "", resp, sizeof(resp), NULL)) != 221)
-		syslog(LOG_NOTICE, "unexpected resonse to QUIT: %s", resp);
+		printerror(0, "", "unexpected resonse to QUIT: %s", resp);
 
 	cfputs(x, "221 goodbye");
-	syslog(LOG_NOTICE, "%d QUIT", rc);
+	printerror(0, "", "%d QUIT", rc);
 	
 	return (0);
 }
@@ -779,7 +779,7 @@ int dopasv(ftp_t *x, char *command, char *par)
 	 */
 
 	if (isdigit(line[k]) == 0) {
-		syslog(LOG_NOTICE, "can't locate passive response: %s", line);
+		printerror(0, "", "can't locate passive response: %s", line);
 		cfputs(x, "500 not accepted");
 		return (0);
 		}
@@ -832,7 +832,7 @@ int dofeat(ftp_t *x)
 
 	sfputs(x, "%s", "FEAT");
 	if (sfgets(x, line, sizeof(line)) == NULL) {
-		syslog(LOG_NOTICE, "monitor: server not responding");
+		printerror(1, "-ERR", "monitor: server not responding");
 		exit (1);
 		}
 
@@ -847,7 +847,7 @@ int dofeat(ftp_t *x)
 	cfputs(x, "211-feature list follows");
 	while (1) {
 		if (sfgets(x, line, sizeof(line)) == NULL) {
-			syslog(LOG_NOTICE, "lost server in FEAT response");
+			printerror(1, "", "lost server in FEAT response");
 			exit (1);
 			}
 		else if (*line != ' ') { 
@@ -934,11 +934,11 @@ int run_acp(ftp_t *x)
 
 	rc = 0;
 	if (pipe(pfd) != 0) {
-		syslog(LOG_NOTICE, "-ERR: can't pipe: %s", strerror(errno));
+		printerror(1, "-ERR", "can't pipe: %s", strerror(errno));
 		exit (1);
 		}
 	else if ((pid = fork()) < 0) {
-		syslog(LOG_NOTICE, "-ERR: can't fork acp: %s", strerror(errno));
+		printerror(1, "-ERR", "can't fork acp: %s", strerror(errno));
 		exit (1);
 		}
 	else if (pid == 0) {
@@ -955,7 +955,7 @@ int run_acp(ftp_t *x)
 		argv[argc] = NULL;
 		execvp(argv[0], argv);
 
-		syslog(LOG_NOTICE, "-ERR: can't exec acp %s: %s", argv[0], strerror(errno));
+		printerror(1, "-ERR", "can't exec acp %s: %s", argv[0], strerror(errno));
 		exit (1);
 		}
 	else {
@@ -972,7 +972,7 @@ int run_acp(ftp_t *x)
 		close(pfd[0]);
 
 		if (waitpid(pid, &rc, 0) < 0) {
-			syslog(LOG_NOTICE, "-ERR: error while waiting for acp: %s", strerror(errno));
+			printerror(1, "-ERR", "error while waiting for acp: %s", strerror(errno));
 			exit (1);
 			}
 
@@ -981,7 +981,7 @@ int run_acp(ftp_t *x)
 			copy_string(message, rc == 0? "access granted": "access denied", sizeof(message));
 
 		if (*message != 0)
-			syslog(LOG_NOTICE, "%s (rc= %d)", message, rc);
+			printerror(0, "", "%s (rc= %d)", message, rc);
 		}
 		
 	return (rc);
@@ -1020,11 +1020,11 @@ int run_ctp(ftp_t *x)
 
 	rc = 0;
 	if (pipe(pfd) != 0) {
-		syslog(LOG_NOTICE, "-ERR: can't pipe: %s", strerror(errno));
+		printerror(1, "-ERR", "can't pipe: %s", strerror(errno));
 		exit (1);
 		}
 	else if ((pid = fork()) < 0) {
-		syslog(LOG_NOTICE, "-ERR: can't fork trp: %s", strerror(errno));
+		printerror(1, "-ERR", "can't fork trp: %s", strerror(errno));
 		exit (1);
 		}
 	else if (pid == 0) {
@@ -1041,7 +1041,7 @@ int run_ctp(ftp_t *x)
 		argv[argc] = NULL;
 		execvp(argv[0], argv);
 
-		syslog(LOG_NOTICE, "-ERR: can't exec trp %s: %s",
+		printerror(1, "-ERR", "can't exec trp %s: %s",
 			argv[0], strerror(errno));
 		exit (1);
 		}
@@ -1068,26 +1068,22 @@ int run_ctp(ftp_t *x)
 			 */
 
 			else if (strcmp(var, "-ERR") == 0  ||  strcmp(var, "-ERR:") == 0) {
-				syslog(LOG_NOTICE, "-ERR: %s", skip_ws(p));
+				printerror(1, "-ERR", "%s", skip_ws(p));
 				exit (1);
 				}
 			}
 
 		fclose(fp);
 
-		/*
-		 * In standalone mode we do not receive the SIGCHLD because
-		 * we set it to SIG_IGN -- 030406asg
-		 */
 
-		if (x->config->standalone == 0  &&  waitpid(pid, &rc, 0) < 0) {
-			syslog(LOG_NOTICE, "-ERR: error while waiting for trp: %s", strerror(errno));
+		if (waitpid(pid, &rc, 0) < 0) {
+			printerror(1, "-ERR", "error while waiting for trp: %s", strerror(errno));
 			exit (1);
 			}
 
 		rc = WIFEXITED(rc) != 0? WEXITSTATUS(rc): 1;
 		if (rc != 0) {
-			syslog(LOG_NOTICE, "-ERR: trp signals error condition, rc= %d", rc);
+			printerror(1, "-ERR", "trp signals error condition, rc= %d", rc);
 			exit (1);
 			}
 		}
@@ -1103,25 +1099,25 @@ int get_ftpdir(ftp_t *x)
 
 	sfputs(x, "%s", "PWD");
 	if (sfgets(x, line, sizeof(line)) == NULL) {
-		syslog(LOG_NOTICE, "monitor: server not responding");
+		printerror(1, "", "monitor: server not responding");
 		exit (1);
 		}
 
 	rc = strtol(line, &p, 10);
 	if (rc != 257) {
-		syslog(LOG_NOTICE, "monitor: PWD status: %d", rc);
+		printerror(1, "", "monitor: PWD status: %d", rc);
 		exit (1);
 		}
 
 	p = skip_ws(p);
 	if (*p == 0) {
-		syslog(LOG_NOTICE, "monitor: directory unset");
+		printerror(1, "", "monitor: directory unset");
 		exit (1);
 		}
 
 
 	if ((start = strchr(p, '/')) == NULL) {
-		syslog(LOG_NOTICE, "monitor: can't find directory in string: %s", p);
+		printerror(1, "", "monitor: can't find directory in string: %s", p);
 		exit (1);
 		}
 
@@ -1130,11 +1126,11 @@ int get_ftpdir(ftp_t *x)
 		x->cwd[len - 1] = 0;
 
 	if (*x->cwd != '/') {
-		syslog(LOG_NOTICE, "monitor: invalid path: %s", x->cwd);
+		printerror(1, "", "monitor: invalid path: %s", x->cwd);
 		exit (1);
 		}
 		
-	syslog(LOG_NOTICE, "cwd: %s", x->cwd);
+	printerror(0, "", "cwd: %s", x->cwd);
 	return (0);
 }
 
@@ -1241,11 +1237,11 @@ int run_ccp(ftp_t *x, char *cmd, char *par)
 
 	rc = 0;
 	if (pipe(pfd) != 0  ||  pipe(lfd)) {
-		syslog(LOG_NOTICE, "-ERR: can't pipe: %s", strerror(errno));
+		printerror(1, "-ERR", "can't pipe: %s", strerror(errno));
 		exit (1);
 		}
 	else if ((pid = fork()) < 0) {
-		syslog(LOG_NOTICE, "-ERR: can't fork ccp: %s", strerror(errno));
+		printerror(1, "-ERR", "can't fork ccp: %s", strerror(errno));
 		exit (1);
 		}
 	else if (pid == 0) {
@@ -1276,7 +1272,7 @@ int run_ccp(ftp_t *x, char *cmd, char *par)
 		argv[argc] = NULL;
 		execvp(argv[0], argv);
 
-		syslog(LOG_NOTICE, "-ERR: can't exec ccp %s: %s", argv[0], strerror(errno));
+		printerror(1, "-ERR", "can't exec ccp %s: %s", argv[0], strerror(errno));
 		exit (1);
 		}
 	else {
@@ -1303,7 +1299,7 @@ int run_ccp(ftp_t *x, char *cmd, char *par)
 		close(lfd[0]);
 
 		if (*message != 0)
-			syslog(LOG_NOTICE, "%s", message);
+			printerror(0, "", "%s", message);
 
 
 
@@ -1325,7 +1321,7 @@ int run_ccp(ftp_t *x, char *cmd, char *par)
 		 */
 
 		if (waitpid(pid, &rc, 0) < 0) {
-			syslog(LOG_NOTICE, "-ERR: error while waiting for ccp: %s", strerror(errno));
+			printerror(1, "-ERR", "error while waiting for ccp: %s", strerror(errno));
 			exit (1);
 			}
 
@@ -1390,6 +1386,8 @@ int dologin(ftp_t *x)
 		strupr(word);
 		if (strcmp(word, "USER") == 0) {
 			get_word(&p, x->username, sizeof(x->username));
+
+			setstatusvar("", "USER", "%s", x->username);
 			cfputs(x, "331 password required");
 			}
 		else if (strcmp(word, "PASS") == 0) {
@@ -1420,7 +1418,7 @@ int dologin(ftp_t *x)
 		/*
 		 * We are extremly liberate here with server selection
 		 * if we have a dynamic control program, we accept
-		 * anything here -- 030404asg
+		 * anything here -- 03APR04asg
 		 */
 
 		if ((p = strchr(x->username, '@')) == NULL  &&  (p = strchr(x->username, '%')) == NULL)
@@ -1440,7 +1438,7 @@ int dologin(ftp_t *x)
 	else if (x->config->selectserver == 0) {
 		if ((p = strchr(x->username, '@')) != NULL  &&  (p = strchr(x->username, '%')) != NULL) {
 			cfputs(x, "500 service unavailable");
-			syslog(LOG_NOTICE, "-ERR: hostname supplied: %s", p);
+			printerror(1, "-ERR", "hostname supplied: %s", p);
 			exit (1);
 			}
 
@@ -1457,14 +1455,14 @@ int dologin(ftp_t *x)
 		if (x->config->use_last_at == 0) {
 			if ((p = strchr(x->username, '@')) == NULL  &&  (p = strchr(x->username, '%')) == NULL) {
 				cfputs(x, "500 service unavailable");
-				syslog(LOG_NOTICE, "-ERR: missing hostname");
+				printerror(1, "-ERR", "missing hostname");
 				exit (1);
 				}
 			}
 		else {
 			if ((p = strrchr(x->username, '@')) == NULL  &&  (p = strrchr(x->username, '%')) == NULL) {
 				cfputs(x, "500 service unavailable");
-				syslog(LOG_NOTICE, "-ERR: missing hostname");
+				printerror(1, "-ERR", "missing hostname");
 				exit (1);
 				}
 			}
@@ -1503,7 +1501,10 @@ int dologin(ftp_t *x)
  *			}
  */
 		}
-	
+
+
+	setstatusvar("", "USER", "%s", x->username);
+	setstatusvar("", "SERVER", "%s", x->server.name);
 
 
 	/*
@@ -1514,6 +1515,8 @@ int dologin(ftp_t *x)
 		*p++ = 0;
 		copy_string(x->local.username, x->username, sizeof(x->local.username));
 		copy_string(x->username, p, sizeof(x->username));
+
+		setstatusvar("", "USER", "%s", x->username);
 		}
 
 	if ((p = strchr(x->password, ':')) != NULL) {
@@ -1537,6 +1540,8 @@ int dologin(ftp_t *x)
 					x->server.name, x->server.port,
 					x->username, x->password);
 			}
+		setstatusvar("", "USER", "%s", x->username);
+		setstatusvar("", "SERVER", "%s", x->server.name);
                 }
 
 
@@ -1547,7 +1552,7 @@ int dologin(ftp_t *x)
 	x->server.port = get_port(x->server.name, 21);
 	if ((hostp = gethostbyname(x->server.name)) == NULL) {
 		cfputs(x, "500 service unavailable");
-		syslog(LOG_NOTICE, "-ERR: can't resolve hostname: %s", x->server.name);
+		printerror(1, "-ERR", "can't resolve hostname: %s", x->server.name);
 		exit (1);
 		}
 
@@ -1557,7 +1562,7 @@ int dologin(ftp_t *x)
 
 	/*
 	 * Call the access control program to check if the proxy
-	 * request is allowed.  Moved code here -- 030404asg
+	 * request is allowed.  Moved code here -- 03APR04asg
 	 */
 
 	if (*x->config->acp != 0) {
@@ -1596,7 +1601,7 @@ int dologin(ftp_t *x)
 
 		if (permitted == 0) {
 			cfputs(x, "500 service unavailable");
-			syslog(LOG_NOTICE, "-ERR: hostname not permitted: %s", x->server.name);
+			printerror(1, "-ERR", "hostname not permitted: %s", x->server.name);
 			exit (1);
 			}
 		}
@@ -1608,16 +1613,16 @@ int dologin(ftp_t *x)
 
 	if ((x->fd.server = openip(x->server.name, x->server.port, x->config->sourceip, 0)) < 0) {
 		cfputs(x, "500 service unavailable");
-		syslog(LOG_NOTICE, "-ERR: can't connect to server: %s", x->server.name);
+		printerror(1, "-ERR", "can't connect to server: %s", x->server.name);
 		exit (1);
 		}
 
-	syslog(LOG_NOTICE, "connected to server: %s", x->server.name);
+	printerror(0, "", "connected to server: %s", x->server.name);
 
 
 	if (sfputc(x, NULL, NULL, line, sizeof(line), NULL) != 220) {
 		cfputs(x, "500 service unavailable");
-		syslog(LOG_NOTICE, "-ERR: unexpected server greeting: %s", line);
+		printerror(1, "-ERR", "unexpected server greeting: %s", line);
 		exit (1);
 		}
 
@@ -1632,39 +1637,39 @@ int dologin(ftp_t *x)
 
 	if (rc == 230) {
 		cfputs(x, "230 login accepted");
-		syslog(LOG_NOTICE, "login accepted: %s@%s, no password needed.", x->username, x->server.name);
+		printerror(0, "", "login accepted: %s@%s, no password needed.", x->username, x->server.name);
 		return (0);
 		}
 	else if (rc != 331) {
 		cfputs(x, "500 service unavailable");
-		syslog(LOG_NOTICE, "-ERR: unexpected reply to USER: %s", line);
+		printerror(1, "-ERR", "unexpected reply to USER: %s", line);
 		exit (1);
 		}
 	else if (sfputc(x, "PASS", x->password, line, sizeof(line), NULL) != 230) {
 		cfputs(x, "530 bad login");
-		syslog(LOG_NOTICE, "-ERR: reply to PASS: %s", line);
+		printerror(1, "-ERR", "reply to PASS: %s", line);
 		exit (1);
 		}
 
 	cfputs(x, "230 login accepted");
-	syslog(LOG_NOTICE, "login accepted: %s@%s", x->username, x->server.name);
+	printerror(0, "", "login accepted: %s@%s", x->username, x->server.name);
 
 	return (0);
 
 /*
 	if (sfputc(x, "USER", x->username, line, sizeof(line), NULL) != 331) {
 		cfputs(x, "500 service unavailable");
-		syslog(LOG_NOTICE, "-ERR: unexpected reply to USER: %s", line);
+		printerror(1, "-ERR", "unexpected reply to USER: %s", line);
 		exit (1);
 		}
 	else if (sfputc(x, "PASS", x->password, line, sizeof(line), NULL) != 230) {
 		cfputs(x, "530 bad login");
-		syslog(LOG_NOTICE, "-ERR: reply to PASS: %s", line);
+		printerror(1, "-ERR", "reply to PASS: %s", line);
 		exit (1);
 		}
 
 	cfputs(x, "230 login accepted");
-	syslog(LOG_NOTICE, "login accepted: %s@%s", x->username, x->server.name);
+	printerror(0, "", "login accepted: %s@%s", x->username, x->server.name);
 
 	return (0);
 */
@@ -1687,7 +1692,7 @@ void signal_handler(int sig)
 		return;
 		}
 
-	syslog(LOG_NOTICE, "-ERR: received signal #%d", sig);
+	printerror(1, "-ERR", "received signal #%d", sig);
 	exit (1);
 }
 
@@ -1727,6 +1732,7 @@ int proxy_request(config_t *config)
 	ftpcmd_t *cmd;
 	ftp_t	*x;
 
+	setstatusvar("STARTED", "PID", "%d", getpid());
 	set_signals();
 
 	/*
@@ -1741,7 +1747,7 @@ int proxy_request(config_t *config)
 
 	rc = 1;
 	if (setsockopt(1, SOL_TCP, TCP_NODELAY, &rc, sizeof(rc)) != 0)
-		syslog(LOG_NOTICE, "can't set TCP_NODELAY, error= %s", strerror(errno));
+		printerror(0, "", "can't set TCP_NODELAY, error= %s", strerror(errno));
 
 #endif
 
@@ -1766,23 +1772,28 @@ int proxy_request(config_t *config)
 
 
 	if (get_client_info(x, 0) < 0) {
-		syslog(LOG_NOTICE, "-ERR: can't get client info: %s", strerror(errno));
+		printerror(1, "-ERR", "can't get client info: %s", strerror(errno));
 		exit (1);
 		}
 
+	setstatusvar("", "CLIENTNAME", "%s", x->client);
+	setstatusvar("", "CLIENT", "%s", x->client_ip);
+
 	x->port = get_interface_info(0, x->interface, sizeof(x->interface));
-	syslog(LOG_NOTICE, "connected to client: %s, interface= %s:%u", x->client,
+	printerror(0, "", "connected to client: %s, interface= %s:%u", x->client,
 				x->interface, x->port);
+
+	setstatusvar("", "INTERFACE", "%s:%u", x->interface, x->port);
 
 	if (*x->config->configfile != 0) {
 		if (readconfig(x->config, x->config->configfile, x->interface) == 0) {
 			cfputs(x, "421 not available");
-			syslog(LOG_NOTICE, "-ERR: unconfigured interface: %s", x->interface);
+			printerror(1, "-ERR", "unconfigured interface: %s", x->interface);
 			exit (1);
 			}
 		}
 
-	syslog(LOG_NOTICE, "info: monitor mode: %s, ccp: %s",
+	printerror(0, "", "info: monitor mode: %s, ccp: %s",
 			x->config->monitor == 0? "off": "on",
 			*x->config->ccp == 0? "<unset>": x->config->ccp);
 
@@ -1807,7 +1818,7 @@ int proxy_request(config_t *config)
 
 		x->xlfp = fopen(x->config->xferlog, "a");
 		if (x->xlfp == NULL) {
-			syslog(LOG_NOTICE, "-WARN: can't open xferlog: %s, error= %s",
+			printerror(0, "-WARN", "can't open xferlog: %s, error= %s",
 					x->config->xferlog, strerror(errno));
 			}
 		}
@@ -1817,10 +1828,13 @@ int proxy_request(config_t *config)
 		copy_string(x->home, x->cwd, sizeof(x->home));
 		}
 
+	setstatusvar("ESTABLISHED", "", "");
+	printerror(0, "+INFO", "%s", getstatusline("connection ready"));
+
 	while ((p = cfgets(x, line, sizeof(line))) != NULL) {
 		if (*p == '\001') {
 			if (*x->ch.command != 0) {
-				syslog(LOG_NOTICE, "%s %s: %ld bytes", x->ch.command, x->ch.filename, x->ch.bytes);
+				printerror(0, "", "%s %s: %ld bytes", x->ch.command, x->ch.filename, x->ch.bytes);
 
 				if (x->xlfp != NULL) {
 					unsigned long now;
@@ -1868,7 +1882,7 @@ int proxy_request(config_t *config)
 
 		if ((cmd = getcmd(command)) == NULL  ||  cmd->resp == -1) {
 			cfputs(x, "502 command not implemented");
-			syslog(LOG_NOTICE, "command not implemented: %s", command);
+			printerror(0, "", "command not implemented: %s", command);
 			continue;
 			}
 
@@ -1890,7 +1904,7 @@ int proxy_request(config_t *config)
 					if (strcmp(command, "LIST") == 0  ||  strcmp(command, "NLST") == 0)
 						/* nichts, ist ok */ ;
 					else {
-						syslog(LOG_NOTICE, "parameter required: %s", command);
+						printerror(1, "-ERR", "parameter required: %s", command);
 						exit (1);
 						}
 					}
@@ -1963,7 +1977,7 @@ int proxy_request(config_t *config)
 			copy_string(x->ch.filename, x->config->monitor != 0? x->filepath: parameter, sizeof(x->ch.filename));
 
 			if (extralog != 0)
-				syslog(LOG_NOTICE, "%d RETR %s", rc, (x->config->monitor != 0)? parameter: x->filepath);
+				printerror(0, "", "%d RETR %s", rc, (x->config->monitor != 0)? parameter: x->filepath);
 			}
 		else if (strcmp(command, "STOR") == 0  ||  strcmp(command, "APPE") == 0  ||  strcmp(command, "STOU") == 0) {
 			x->ch.operation = OP_PUT;	/* fuer PASV mode */
@@ -1983,9 +1997,9 @@ int proxy_request(config_t *config)
 			copy_string(x->ch.filename, x->config->monitor != 0? x->filepath: parameter, sizeof(x->ch.filename));
 			if (extralog != 0) {
 				if (strcmp(command, "STOU") == 0)
-					syslog(LOG_NOTICE, "%d %s %s", rc, command, "-");
+					printerror(0, "", "%d %s %s", rc, command, "-");
 				else
-					syslog(LOG_NOTICE, "%d %s %s", rc, command, x->ch.filename);
+					printerror(0, "", "%d %s %s", rc, command, x->ch.filename);
 				}
 			}
 		else {
@@ -1996,9 +2010,9 @@ int proxy_request(config_t *config)
 			cfputs(x, line);
 			if (extralog != 0  &&  cmd->log != 0) {
 				if (x->config->monitor != 0  &&  cmd->ispath != 0)
-					syslog(LOG_NOTICE, "%d %s %s", rc, command, x->filepath);
+					printerror(0, "", "%d %s %s", rc, command, x->filepath);
 				else
-					syslog(LOG_NOTICE, "%d %s%s%s", rc, command, *parameter != 0? " ": "", parameter);
+					printerror(0, "", "%d %s%s%s", rc, command, *parameter != 0? " ": "", parameter);
 				}
 
 			if (strcmp(command, "CWD") == 0  ||  strcmp(command, "CDUP") == 0) {
@@ -2011,7 +2025,10 @@ int proxy_request(config_t *config)
 	if (*x->config->ccp != 0)
 		run_ccp(x, "+EXIT", x->session);
 
-	syslog(LOG_NOTICE, "+OK: proxy terminating");
+
+	setstatusvar("QUIT", "", "");
+	printerror(0, "+OK", "%s", getstatusline("ok"));
+
 	return (0);
 }
 
