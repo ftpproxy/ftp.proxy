@@ -1,7 +1,6 @@
 /*
 
-    File: tcpproxy/lib.h
-    Version 1.0
+    File: ftpproxy/lib.h
     
     Copyright (C) 1999 by Wolfgang Zekoll  <wzk@quietsche-entchen.de>
 

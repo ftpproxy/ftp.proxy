@@ -2,7 +2,6 @@
 /*
 
     File: ftpproxy/ftp.h
-    Version: Version 1.1
 
     Copyright (C) 1999  Wolfgang Zekoll  <wzk@quietsche-entchen.de>
   
@@ -44,8 +43,13 @@ typedef struct _config {
 	} u;
 
     char	acp[200];
+    char	ccp[200];
     char	varname[80];
     } config_t;
+
+
+#define	CCP_OK			0
+#define	CCP_ERROR		1
 
 
 #define	PORT_LISTEN		1
@@ -133,7 +137,9 @@ typedef struct _ftp {
 	char		buffer[4096];
 	} bio;
 
-
+    char	session[80];
+    int		ccpcoll;
+    
     int		commands;
     unsigned long datain, dataout;
     } ftp_t;

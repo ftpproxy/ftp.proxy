@@ -2,7 +2,6 @@
 /*
 
     File: ftpproxy/main.c
-    Version: Version 1.1
 
     Copyright (C) 1999  Wolfgang Zekoll  <wzk@quietsche-entchen.de>
   
@@ -78,7 +77,7 @@ int main(int argc, char *argv[], char *envp[])
 		}
 
 	config = allocate(sizeof(config_t));
-	config->timeout = 300;
+	config->timeout = 15 * 60;
 	strcpy(config->varname, "PROXY_");
 
 	openlog(program, LOG_PID, LOG_MAIL);
@@ -94,6 +93,12 @@ int main(int argc, char *argv[], char *envp[])
 					missing_arg(c, "access control program");
 
 				copy_string(config->acp, argv[k++], sizeof(config->acp));
+				}
+			else if (c == 'c') {
+				if (k >= argc)
+					missing_arg(c, "command control program");
+
+				copy_string(config->ccp, argv[k++], sizeof(config->ccp));
 				}
 			else if (c == 'e')
 				config->selectserver = 1;

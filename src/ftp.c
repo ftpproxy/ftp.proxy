@@ -2,7 +2,6 @@
 /*
 
     File: ftpproxy/ftp.c
-    Version: Version 1.1
 
     Copyright (C) 1999  Wolfgang Zekoll  <wzk@quietsche-entchen.de>
   
@@ -29,6 +28,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 
+#include <time.h>
 #include <signal.h>
 #include <wait.h>
 
@@ -108,7 +108,7 @@ unsigned get_interface_info(int pfd, char *ip, int max)
 
 	size = sizeof(saddr);
 	if (getsockname(pfd, (struct sockaddr *) &saddr, &size) < 0) {
-		syslog(LOG_NOTICE, "can't get interface info: %m");
+		syslog(LOG_NOTICE, "-ERR: can't get interface info: %m");
 		exit (-1);
 		}
 
@@ -230,7 +230,7 @@ int getc_fd(ftp_t *x, int fd)
 					adrlen = sizeof(struct sockaddr);
 					sock = accept(x->ch.active, (struct sockaddr *) &adr, &adrlen);
 					if (sock < 0) {
-						syslog(LOG_NOTICE, "accept error: %m");
+						syslog(LOG_NOTICE, "-ERR: accept error: %m");
 						exit (1);
 						}
 					else {
@@ -238,7 +238,7 @@ int getc_fd(ftp_t *x, int fd)
 
 						copy_string(remote, inet_ntoa(adr.sin_addr), sizeof(remote));
 						if (strcmp(x->server.ipnum, remote) != 0) {
-							syslog(LOG_NOTICE, "unexpected connect: %s", remote);
+							syslog(LOG_NOTICE, "-ERR: unexpected connect: %s", remote);
 							exit (1);
 							}
 						}
@@ -250,7 +250,7 @@ int getc_fd(ftp_t *x, int fd)
 						fprintf (stderr, "osock= %d\n", x->ch.osock);
 
 					if ((x->ch.isock = openip(x->ch.client.ipnum, x->ch.client.port)) < 0) {
-						syslog(LOG_NOTICE, "can't connect to client: %m");
+						syslog(LOG_NOTICE, "-ERR: can't connect to client: %m");
 						exit (1);
 						}
 
@@ -266,7 +266,7 @@ int getc_fd(ftp_t *x, int fd)
 						x->ch.other  = x->ch.osock;
 						}
 					else {
-						syslog(LOG_NOTICE, "transfer operation error");
+						syslog(LOG_NOTICE, "-ERR: transfer operation error");
 						exit (1);
 						}
 
@@ -527,7 +527,7 @@ int doport(ftp_t *x, char *command, char *par)
 
 	ch = &x->ch;
 	_getipnum(par, &p, ch->client.ipnum, sizeof(ch->client.ipnum));
-	ch->client.port  = _getport(p, &p);
+	ch->client.port = _getport(p, &p);
 	if (debug)
 		fprintf (stderr, "client listens on %s:%u\n", ch->client.ipnum, ch->client.port);
 
@@ -571,7 +571,7 @@ int set_variables(ftp_t *x)
 
 	snprintf (var, sizeof(var) - 2, "%sINTERFACE", vp);
 	setenv(var, x->interface, 1);
-	
+
 	snprintf (val, sizeof(val) - 2, "%u", x->port);
 	snprintf (var, sizeof(var) - 2, "%sPORT", vp);
 	setenv(var, val, 1);
@@ -584,23 +584,23 @@ int set_variables(ftp_t *x)
 
 	snprintf (var, sizeof(var) - 2, "%sSERVER", vp);
 	setenv(var, x->server.ipnum, 1);
-	
+
 	snprintf (val, sizeof(val) - 2, "%u", x->server.port);
 	snprintf (var, sizeof(var) - 2, "%sSERVERPORT", vp);
 	setenv(var, val, 1);
 
 	snprintf (var, sizeof(var) - 2, "%sSERVERNAME", vp);
 	setenv(var, x->server.name, 1);
-	
+
 	snprintf (var, sizeof(var) - 2, "%sSERVERLOGIN", vp);
 	setenv(var, x->username, 1);
-	
+
 	snprintf (var, sizeof(var) - 2, "%sUSERNAME", vp);
 	setenv(var, x->local.username, 1);
-	
+
 	snprintf (var, sizeof(var) - 2, "%sPASSWD", vp);
 	setenv(var, x->local.password, 1);
-	
+
 	return (0);
 }
 
@@ -614,11 +614,11 @@ int run_acp(ftp_t *x)
 
 	rc = 0;
 	if (pipe(pfd) != 0) {
-		syslog(LOG_NOTICE, "can't pipe: %m");
+		syslog(LOG_NOTICE, "-ERR: can't pipe: %m");
 		exit (1);
 		}
 	else if ((pid = fork()) < 0) {
-		syslog(LOG_NOTICE, "can't fork acp: %m");
+		syslog(LOG_NOTICE, "-ERR: can't fork acp: %m");
 		exit (1);
 		}
 	else if (pid == 0) {
@@ -635,7 +635,7 @@ int run_acp(ftp_t *x)
 		argv[argc] = NULL;
 		execvp(argv[0], argv);
 
-		syslog(LOG_NOTICE, "can't exec acp %s: %m", argv[0]);
+		syslog(LOG_NOTICE, "-ERR: can't exec acp %s: %m", argv[0]);
 		exit (1);
 		}
 	else {
@@ -652,7 +652,7 @@ int run_acp(ftp_t *x)
 		
 
 		if (waitpid(pid, &rc, 0) < 0) {
-			syslog(LOG_NOTICE, "error while waiting for acp: %m");
+			syslog(LOG_NOTICE, "-ERR: error while waiting for acp: %m");
 			exit (1);
 			}
 
@@ -666,6 +666,108 @@ int run_acp(ftp_t *x)
 		
 	return (rc);
 }
+
+
+int run_ccp(ftp_t *x, char *cmd, char *par)
+{
+	int	rc, pid, pfd[2];
+	char	line[300];
+
+	/*
+	 * Wenn kein ccp angegeben ist ist alles erlaubt.
+	 */
+
+	if (*x->config->ccp == 0)
+		return (CCP_OK);
+
+
+	/*
+	 * Der Vorgang fuer ccps ist fast gleich mit dem fuer acps.
+	 */
+
+	rc = 0;
+	if (pipe(pfd) != 0) {
+		syslog(LOG_NOTICE, "-ERR: can't pipe: %m");
+		exit (1);
+		}
+	else if ((pid = fork()) < 0) {
+		syslog(LOG_NOTICE, "-ERR: can't fork ccp: %m");
+		exit (1);
+		}
+	else if (pid == 0) {
+		int	argc;
+		char	var[80], *argv[32];
+
+		close(0);		/* Das ccp hat keine direkte Verbindung */
+		dup2(pfd[1], 1);	/*    zum Client, stdout und stderr */
+		dup2(pfd[1], 2);	/*    werden vom Proxy gelesen. */
+		close(pfd[0]);
+		set_variables(x);
+		
+		snprintf (var, sizeof(var) - 2, "%sCOMMAND", x->config->varname);
+		setenv(var, cmd, 1);
+
+		snprintf (var, sizeof(var) - 2, "%sPARAMETER", x->config->varname);
+		setenv(var, par, 1);
+
+		snprintf (var, sizeof(var) - 2, "%sSESSION", x->config->varname);
+		setenv(var, x->session, 1);
+
+		snprintf (var, sizeof(var) - 2, "%sCCPCOLL", x->config->varname);
+		snprintf (line, sizeof(line) - 2, "%d", x->ccpcoll);
+		setenv(var, line, 1);
+
+
+		copy_string(line, x->config->ccp, sizeof(line));
+		argc = split(line, argv, ' ', 30);
+		argv[argc] = NULL;
+		execvp(argv[0], argv);
+
+		syslog(LOG_NOTICE, "-ERR: can't exec ccp %s: %m", argv[0]);
+		exit (1);
+		}
+	else {
+		int	len;
+		char	command[200], message[300];
+
+		close(pfd[1]);
+		*message = 0;
+		if ((len = read(pfd[0], message, sizeof(message) - 2)) < 0)
+			len = 0;
+
+		message[len] = 0;
+		noctrl(message);
+		
+
+		if (waitpid(pid, &rc, 0) < 0) {
+			syslog(LOG_NOTICE, "-ERR: error while waiting for ccp: %m");
+			exit (1);
+			}
+
+		rc = WIFEXITED(rc) != 0? WEXITSTATUS(rc): 1;
+		if (rc == 0) {
+			if (*message != 0)
+				syslog(LOG_NOTICE, "ccp: %s", message);
+
+			return (CCP_OK);
+			}
+
+		if (*message == 0)
+			copy_string(message, "permission denied", sizeof(message));
+
+		snprintf (command, sizeof(command) - 2, "%s%s%s", cmd, (par != 0? " ": ""), par);
+		syslog(LOG_NOTICE, "ccp: -ERR: %s@%s: %s: %s: rc= %d",
+				x->username, x->server.name,
+				command, message, rc);
+		}
+
+	x->ccpcoll++;
+	cfputs(x, "553 permission denied.");
+
+	return (CCP_ERROR);
+}
+
+
 
 int dologin(ftp_t *x)
 {
@@ -706,7 +808,7 @@ int dologin(ftp_t *x)
 	if (x->config->selectserver == 0) {
 		if ((p = strchr(x->username, '@')) != NULL  &&  (p = strchr(x->username, '%')) != NULL) {
 			cfputs(x, "500 service unavailable");
-			syslog(LOG_NOTICE, "hostname supplied: %s", p);
+			syslog(LOG_NOTICE, "-ERR: hostname supplied: %s", p);
 			exit (1);
 			}
 
@@ -722,7 +824,7 @@ int dologin(ftp_t *x)
 
 		if ((p = strchr(x->username, '@')) == NULL  &&  (p = strchr(x->username, '%')) == NULL) {
 			cfputs(x, "500 service unavailable");
-			syslog(LOG_NOTICE, "missing hostname");
+			syslog(LOG_NOTICE, "-ERR: missing hostname");
 			exit (1);
 			}
 
@@ -749,7 +851,7 @@ int dologin(ftp_t *x)
 
 			if (permitted == 0) {
 				cfputs(x, "500 service unavailable");
-				syslog(LOG_NOTICE, "hostname not permitted: %s", x->server.name);
+				syslog(LOG_NOTICE, "-ERR: hostname not permitted: %s", x->server.name);
 				exit (1);
 				}
 			}
@@ -763,7 +865,7 @@ int dologin(ftp_t *x)
 	x->server.port = get_port(x->server.name, 21);
 	if ((hostp = gethostbyname(x->server.name)) == NULL) {
 		cfputs(x, "500 service unavailable");
-		syslog(LOG_NOTICE, "can't resolve hostname: %s", x->server.name);
+		syslog(LOG_NOTICE, "-ERR: can't resolve hostname: %s", x->server.name);
 		exit (1);
 		}
 
@@ -802,7 +904,7 @@ int dologin(ftp_t *x)
 
 	if ((x->fd.server = openip(x->server.name, x->server.port)) < 0) {
 		cfputs(x, "500 service unavailable");
-		syslog(LOG_NOTICE, "can't connect to server: %s", x->server.name);
+		syslog(LOG_NOTICE, "-ERR: can't connect to server: %s", x->server.name);
 		exit (1);
 		}
 
@@ -810,14 +912,14 @@ int dologin(ftp_t *x)
 	sfgets(x, line, sizeof(line));
 	while (line[3] != ' ') {
 		if (sfgets(x, line, sizeof(line)) == NULL) {
-			syslog(LOG_NOTICE, "lost server while reading client greeting: %s", x->server.name);
+			syslog(LOG_NOTICE, "-ERR: lost server while reading client greeting: %s", x->server.name);
 			exit (1);
 			}
 		}
 		
 	if (atoi(line) != 220) {
 		cfputs(x, "500 service unavailable");
-		syslog(LOG_NOTICE, "unexpected server greeting: %s", line);
+		syslog(LOG_NOTICE, "-ERR: unexpected server greeting: %s", line);
 		exit (1);
 		}
 
@@ -827,12 +929,12 @@ int dologin(ftp_t *x)
 
 	if (sfputc(x, "USER", x->username, line, sizeof(line), NULL) != 331) {
 		cfputs(x, "500 service unavailable");
-		syslog(LOG_NOTICE, "unexpected reply to USER: %s", line);
+		syslog(LOG_NOTICE, "-ERR: unexpected reply to USER: %s", line);
 		exit (1);
 		}
 	else if (sfputc(x, "PASS", x->password, line, sizeof(line), NULL) != 230) {
 		cfputs(x, "530 bad login");
-		syslog(LOG_NOTICE, "reply to PASS: %s", line);
+		syslog(LOG_NOTICE, "-ERR: reply to PASS: %s", line);
 		exit (1);
 		}
 
@@ -843,6 +945,27 @@ int dologin(ftp_t *x)
 }
 
 
+
+void signal_handler(int sig)
+{
+	syslog(LOG_NOTICE, "-ERR: received signal #%d", sig);
+	exit (1);
+}
+
+int set_signals(void)
+{
+	signal(SIGHUP, signal_handler);
+	signal(SIGINT, signal_handler);
+	signal(SIGQUIT, signal_handler);
+	signal(SIGSEGV, signal_handler);
+	signal(SIGPIPE, signal_handler);
+	signal(SIGALRM, signal_handler);
+	signal(SIGTERM, signal_handler);
+	signal(SIGUSR1, signal_handler);
+	signal(SIGUSR2, signal_handler);
+
+	return (0);
+}
 
 
 ftpcmd_t *getcmd(char *name)
@@ -857,6 +980,7 @@ ftpcmd_t *getcmd(char *name)
 	return (NULL);
 }
 
+
 int proxy_request(config_t *config)
 {
 	int	rc;
@@ -864,11 +988,14 @@ int proxy_request(config_t *config)
 	ftpcmd_t *cmd;
 	ftp_t	*x;
 
+	set_signals();
+
 	x = allocate(sizeof(ftp_t));
 	x->config = config;
+	snprintf (x->session, sizeof(x->session) - 2, "%lu-%u", time(NULL), getpid());
 
 	if (get_client_info(x, 0) < 0) {
-		syslog(LOG_NOTICE, "can't get client info: %m");
+		syslog(LOG_NOTICE, "-ERR: can't get client info: %m");
 		exit (1);
 		}
 
@@ -897,8 +1024,10 @@ int proxy_request(config_t *config)
 		strupr(word);
 		p = skip_ws(p);
 
-		if (strcmp(word, "QUIT") == 0)
+		if (strcmp(word, "QUIT") == 0) {
+			run_ccp(x, "QUIT", "");
 			doquit(x);
+			}
 		else if (strcmp(word, "PORT") == 0)
 			doport(x, word, p);
 		else if (strcmp(word, "LIST") == 0  ||  strcmp(word, "NLST") == 0) {
@@ -906,6 +1035,9 @@ int proxy_request(config_t *config)
 
 			copy_string(command, word, sizeof(command));
 			get_word(&p, word, sizeof(word));
+			if (run_ccp(x, command, word) != CCP_OK)
+				continue;
+
 			rc = sfputc(x, command, word, line, sizeof(line), NULL);
 			if (rc == 125  ||  rc == 150)
 				x->ch.operation = OP_GET;
@@ -917,6 +1049,9 @@ int proxy_request(config_t *config)
 			}
 		else if (strcmp(word, "RETR") == 0) {
 			get_word(&p, word, sizeof(word));
+			if (run_ccp(x, "RETR", word) != CCP_OK)
+				continue;
+
 			rc = sfputc(x, "RETR", word, line, sizeof(line), NULL);
 			if (rc == 125  ||  rc == 150)
 				x->ch.operation = OP_GET;
@@ -937,6 +1072,9 @@ int proxy_request(config_t *config)
 				*word = 0;
 			else
 				get_word(&p, word, sizeof(word));
+
+			if (run_ccp(x, command, word) != CCP_OK)
+				continue;
 
 			rc = sfputc(x, command, word, line, sizeof(line), NULL);
 			if (rc == 125  ||  rc == 150) {
@@ -960,6 +1098,9 @@ int proxy_request(config_t *config)
 			else if (cmd->par > 0)
 				get_word(&p, word, sizeof(word));
 
+			if (run_ccp(x, command, word) != CCP_OK)
+				continue;
+
 			rc = sfputc(x, command, word, line, sizeof(line), NULL);
 			cfputs(x, line);
 			if (extralog != 0  &&  cmd->log != 0)
@@ -971,6 +1112,10 @@ int proxy_request(config_t *config)
 			}
 		}
 
+	if (*x->config->ccp != 0)
+		run_ccp(x, "+EXIT", x->session);
+
+	syslog(LOG_NOTICE, "+OK: proxy terminating");
 	return (0);
 }
 

@@ -1,8 +1,7 @@
 
 /*
 
-    File: tcpproxy/ip-lib.c
-    Version: 1.0
+    File: ftpproxy/ip-lib.c
 
     Copyright (C) 1999  Wolfgang Zekoll  <wzk@quietsche-entchen.de>
   
@@ -28,6 +27,7 @@
 #include <ctype.h>
 
 #include <signal.h>
+#include <syslog.h>
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -85,13 +85,13 @@ unsigned int getportnum(char *name)
 	else {
 		portdesc = getservbyname(name, "tcp");
 		if (portdesc == NULL) {
-			fprintf (stderr, "%s: service not found: %s\n", program, name);
+			syslog(LOG_NOTICE, "-ERR: service not found: %s", name);
 			exit (-1);
 			}
 
 		port = ntohs(portdesc->s_port);
 		if (port == 0) {
-			fprintf (stderr, "%s: port error: %s\n", program, name);
+			syslog(LOG_NOTICE, "-ERR: port error: %s\n", name);
 			exit (-1);
 			}
 		}
@@ -119,7 +119,7 @@ int bind_to_port(char *interface, unsigned int port)
 	int	sock;
 
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		fprintf (stderr, "%s: can't create socket\n", program);
+		syslog(LOG_NOTICE, "-ERR: can't create socket: %m");
 		exit (-1);
 		}
 	else {
@@ -141,7 +141,7 @@ int bind_to_port(char *interface, unsigned int port)
 
 		ifp = gethostbyname(interface);
 		if (ifp == NULL) {
-			fprintf (stderr, "%s: can't lookup %s\n", program, interface);
+			syslog(LOG_NOTICE, "-ERR: can't lookup %s", interface);
 			exit (-1);
 			}
 
@@ -150,13 +150,13 @@ int bind_to_port(char *interface, unsigned int port)
 		
 		
 	if (bind(sock, (struct sockaddr *) &saddr, sizeof(saddr))) {
-		fprintf (stderr, "%s: can't bind to %s:%u\n", program, interface, port);
+		syslog(LOG_NOTICE, "-ERR: can't bind to %s:%u", interface, port);
 		exit (-1);
 		}
 		
 		
 	if (listen(sock, 5) < 0) {
-		fprintf (stderr, "%s: listen error\n", program);
+		syslog(LOG_NOTICE, "-ERR: listen error: %m");
 		exit (-1);
 		}
 

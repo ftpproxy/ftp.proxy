@@ -13,7 +13,7 @@
 .in -0.5i
 .sp
 ..
-.TH FTP.PROXY 1 "26 OCTOBER 1999"
+.TH FTP.PROXY 1 "21 MARCH 2000"
 .SH NAME
 ftp.proxy \- FTP proxy server
 .SH SYNOPSIS
@@ -23,7 +23,7 @@ ftp.proxy \- FTP proxy server
 is a proxy server for a subset of the file tranfer protocol described in
 RFC 959.
 It forwards traffic between a client and a \fIserver\fR without looking too much
-if both host do real FTP.
+if both hosts do real FTP.
 The FTP server can be either given on the command line or supplied by the
 client.
 .PP
@@ -94,12 +94,43 @@ the colon and the remaining right side is passed on to the server.
 Furthermore the acp's stdout is connected to the FTP client and
 it's stderr is read by \fIftp.proxy\fR which writes the acp's stderr output
 to syslog.
+.SS "Command Control"
+If a command control program is given with the \fB-c\fR option each
+command entered (the only exception is `PORT') by the client is handed to it.
+The ccp returns an exit code of 0 to grant and any other to deny access (the
+exit code to the `QUIT' command is ignored).
+For this the same variables as for acp's are set with the addition
+of
+.TP
+\fBPROXY_COMMAND\fR, \fBPROXY_PARAMETER\fR
+FTP command and parameter (if set).
+.TP
+\fBPROXY_SESSION\fR
+a unique identifier for the proxy session.
+.TP
+\fBPROXY_CCPCOLL\fR,
+the client's number of collisions with the ccp's permission rules (number
+of `permission denied' responses).
+.PP
+The ccp's stdout and stderr are connected to \fIftp.proxy\fR and a one line
+message written by the ccp goes to syslog.
+In case that the access is denied the client receives a 553 return code
+from \fIftp.proxy\fR.
+.PP
+On normal program termination (`QUIT' command or timeout) the ccp is called
+with the command `+EXIT' to do some final clean up.
+Notice that abnormal terminations (most signals program errors) should be
+preceded with a `-ERR' line in the syslog.
 .SH OPTIONS
 The following options are available:
 .TP
 \fB-a\fR \fIacp\fR
 specify an access control program that grants or denies access via
 \fIftp.proxy\fR.
+.TP
+\fB-c\fR \fIccp\fR
+set a command control program that grants or denies the usage of FTP
+commands through \fIftp.proxy\fR.
 .TP
 \fB-d\fR
 enter debug mode, the communication between server and client is written
@@ -118,11 +149,11 @@ from the comma separated \fIlist\fR.
 The wildcards `*' and `?' can be used.
 .TP
 \fB-t\fR \fItimeout\fR
-specify a different FTP timeout in seconds than the default of 300 (5 minutes).
+specify a different FTP timeout in seconds than the default of 900 (15 minutes).
 .TP
 \fB-v\fR \fIprefix\fR
 set \fIprefix\fR as variable prefix for the variable passwd to the access
-control program.
+and command control program.
 .PP
 .SH "SEE ALSO"
 .IR inetd (1),
