@@ -2,6 +2,19 @@
 ** Notice: Version 1.0.2 - 1.0.6 and 1.0.9 - 1.1.1 were never released
            to the public.
 
+Version 1.1.6.beta7 - 10FEB2003asg
+- ----------------------------------
+
+  * Added compile-help in src/Makefile for solaris and a putenv
+    workaround for the missing function.
+    Hope ftp.proxy will now compile on solaris without errors.
+    Mentioned by Gregoire Barbier, Lefteris Giakoumatos, 
+    Christophe Giraud-Briquet, Neil McCalden and others.
+
+  * Complete rewrite of multiline server response handling.
+    Handling is now much more RFC conform in this point.
+
+
 Version 1.1.6.beta6 - 22JAN2003asg
 - ----------------------------------
 

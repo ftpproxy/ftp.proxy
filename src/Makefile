@@ -1,6 +1,10 @@
 
+# uncomment following for Solaris compile (need gnu make for top level make file)
+#OSFLAG = -DSOLARIS
+#OSLIB = -lnsl -lsocket
+
 CC =		gcc
-CFLAGS =	-O2 -Wall -ggdb -pedantic -DVERSION=\"$(VERSION)\"
+CFLAGS =	-O2 -Wall -ggdb -DVERSION=\"$(VERSION)\" ${OSFLAG}
 
 FTPPROXY =	main.o ftp.o daemon.o ip-lib.o lib.o
 
@@ -11,7 +15,7 @@ all:		$(TARGETS)
 	-ctags *.[ch]
 
 ftp.proxy:	$(FTPPROXY)
-	$(CC) -o $@ $(FTPPROXY)
+	$(CC) -o $@ $(FTPPROXY) ${OSLIB}
 
 	
 clean:

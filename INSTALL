@@ -7,6 +7,14 @@ to be completed ...
 	
 	make
 	make install
+	
+	If you like to compile ftp.proxy on a SystemV OS (like Solaris) please uncomment the following two lines in src/Makefile:
+	
+	OSFLAG = -DSOLARIS
+	OSLIB = -lnsl -lsocket
+	
+	Note: You must have gnu make and gcc installed on your system.
+
 
 
  2. Installation

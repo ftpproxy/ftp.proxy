@@ -1,5 +1,5 @@
 
-VERSION =	1.1.6.beta6
+VERSION =	1.1.6.beta7
 DIR =		ftpproxy-$(VERSION)
 TAR =		ftpproxy-$(VERSION)
 

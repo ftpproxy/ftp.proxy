@@ -401,6 +401,7 @@ int getc_fd(ftp_t *x, int fd)
 					 * Handling servers that close the data connection -- 24APR02asg
 					 */
 
+					wrote = 0;
 					if ((bytes > 0)  &&  ((wrote = write(x->ch.other, buffer, bytes)) == bytes))
 						x->ch.bytes += bytes;
 					else {
@@ -568,36 +569,34 @@ int sfputc(ftp_t *x, char *command, char *parameter, char *line, int size, char 
 
 		return (-1);
 		}
+	else if (strlen(line) < 3) {
+		if (debug != 0)
+			fprintf (stderr, "short server reply in sfputc()\n");
 
-	rc = strtol(line, &p, 10);
-	p = skip_ws(p);
-	if (*p == '-') {
-		cfputs(x, line);
-		while (1) {
-			if (sfgets(x, line, size) == NULL) {
-				if (debug != 2)
-					fprintf (stderr, "server disappered in sfputc(), pos #2\n");
-
-				return (-1);
-				}
-
-			p = noctrl(line);
-			if (*p == ' ')
-				/* weiter */ ;
-			else if (atoi(line) == rc) {
-				if (strlen(line) == 3)
-					break;
-				else if (strlen(line) > 3  &&  line[3] == ' ')
-					break;
-				}
-
-			cfputs(x, line);
-			}
+		return (-1);
 		}
 
-	p = skip_ws(p);
-	if (here != NULL)
+	rc = atoi(line);
+	if (line[3] != ' '  &&  line[3] != 0) {
+        	while (1) {
+                	if (sfgets(x, line, size) == NULL) {
+				syslog(LOG_NOTICE, "-ERR: lost server while reading client greeting: %s", x->server.name);
+				exit (1);
+				}
+
+			if (strlen(line) < 3)
+				/* line too short to be response's last line */ ;
+			else if (line[3] != ' '  &&  line[3] != 0)
+				/* neither white space nor EOL at position #4 */ ;
+			else if (line[0] >= '0'  &&  line[0] <= '9'  &&  atoi(line) == rc)
+                       		break;		/* status code followed by EOL or blank detected */
+			}
+        	}
+
+	if (here != NULL) {
+		p = skip_ws(&line[3]);
 		*here = p;
+		}
 
 	return (rc);
 }
@@ -868,8 +867,13 @@ int setvar(ftp_t *x, char *var, char *value)
 {
 	char	varname[200];
 
+	#if defined SOLARIS
+	snprintf (varname, sizeof(varname) - 2, "%s%s=%s", x->config->varname, var, value != NULL? value: "");
+	putenv(varname);
+	#else
 	snprintf (varname, sizeof(varname) - 2, "%s%s", x->config->varname, var);
 	setenv(varname, value != NULL? value: "", 1);
+	#endif
 
 	return (0);
 }
@@ -986,7 +990,6 @@ int run_trp(ftp_t *x)
 {
 	int	rc, pid, pfd[2];
 	char	line[300];
-	char	*p;
 	FILE	*fp;
 	
 	if (*x->config->trp == 0)
@@ -1020,7 +1023,6 @@ int run_trp(ftp_t *x)
 		exit (1);
 		}
 	else {
-		int	len;
 		char	*p, var[80], line[300];
 
 		close(pfd[1]);
@@ -1047,7 +1049,7 @@ int run_trp(ftp_t *x)
 
 		rc = WIFEXITED(rc) != 0? WEXITSTATUS(rc): 1;
 		if (rc != 0) {
-			syslog("-ERR: trp signals error condition, rc= %d", rc);
+			syslog(LOG_NOTICE, "-ERR: trp signals error condition, rc= %d", rc);
 			exit (1);
 			}
 		}
@@ -1485,15 +1487,16 @@ int dologin(ftp_t *x)
                 if (run_trp(x) != 0)
                         exit (0);       /* Never happens, we exit in run_trp() */
 
-		if (debug != 0)
-                fprintf (stderr, "trp debug: server= %s:%u, login= %s, passwd= %s",
-                        x->server.name, x->server.port,
-                        x->username, x->password);
+		if (debug != 0) {
+	                fprintf (stderr, "trp debug: server= %s:%u, login= %s, passwd= %s",
+					x->server.name, x->server.port,
+					x->username, x->password);
+			}
                 }
 
 
 	/*
-	 * Verbindung zum Server aufbauen.
+	 * Establish connection to the server
 	 */
 
 	if ((x->fd.server = openip(x->server.name, x->server.port, NULL, 0)) < 0) {
@@ -1505,15 +1508,7 @@ int dologin(ftp_t *x)
 	syslog(LOG_NOTICE, "connected to server: %s", x->server.name);
 
 
-	sfgets(x, line, sizeof(line));
-	while (line[3] != ' '  &&  line[3] != 0) {
-		if (sfgets(x, line, sizeof(line)) == NULL) {
-			syslog(LOG_NOTICE, "-ERR: lost server while reading client greeting: %s", x->server.name);
-			exit (1);
-			}
-		}
-
-	if (atoi(line) != 220) {
+	if (sfputc(x, NULL, NULL, line, sizeof(line), NULL) != 220) {
 		cfputs(x, "500 service unavailable");
 		syslog(LOG_NOTICE, "-ERR: unexpected server greeting: %s", line);
 		exit (1);
@@ -1524,7 +1519,6 @@ int dologin(ftp_t *x)
 	 *
 	 * Complete rewrite because of servers wanting no password after
 	 * login of anonymous user.
-	 *
 	 */
 
 	rc = sfputc(x, "USER", x->username, line, sizeof(line), NULL);
