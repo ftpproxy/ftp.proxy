@@ -3,6 +3,7 @@
     File: ftpproxy/lib.h
     
     Copyright (C) 1999 by Wolfgang Zekoll  <wzk@quietsche-entchen.de>
+    Copyright (C) 2000, 2003  Andreas Schoenberg  <asg@ftpproxy.org>
 
     This source is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

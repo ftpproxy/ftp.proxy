@@ -3,7 +3,7 @@
 
     File: ftpproxy/daemon.c 
 
-    Copyright (C) 2002  Andreas Schoenberg  <asg@ftpproxy.org> 
+    Copyright (C) 2002,2003  Andreas Schoenberg  <asg@ftpproxy.org> 
   
     This software is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
