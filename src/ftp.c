@@ -4,7 +4,7 @@
     File: ftpproxy/ftp.c
 
     Copyright (C) 1999, 2000  Wolfgang Zekoll  <wzk@quietsche-entchen.de>
-    Copyright (C) 2000, 2001  Andreas Schoenberg  <asg@compucation.de>
+    Copyright (C) 2000, 2001  Andreas Schoenberg  <asg@daemons.de>
   
     This software is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -62,46 +62,50 @@ ftpcmd_t cmdtab[] = {
 	 * Einfache FTP Kommandos.
 	 */
 
-    "ABOR", 0, 0, 0,	225, 1,			/* oder 226 */
-    "ACCT", 1, 0, 0,	230, 0,
-    "CDUP", 1, 1, 1,	200, 1,
-    "CWD",  1, 1, 1,	250, 1,
-    "DELE", 1, 1, 1,	250, 1,
-    "NOOP", 0, 0, 0,	200, 0,
-    "MKD",  1, 1, 1,	257, 1,
-    "MODE", 1, 0, 0,	200, 0,
-    "PASV", 0, 0, 0,	0, /* 227, */ 0,	/* nicht unterstuetzt */
-    "PWD",  0, 0, 0,	257, 0,
-    "QUIT", 0, 0, 0,	221, 0,
-    "REIN", 0, 0, 0,	0, /* 220, */ 0,	/* wird nicht unterstuetzt */
-    "REST", 1, 0, 0,	350, 0,
-    "RNFR", 1, 1, 1,	350, 1,
-    "RNTO", 1, 1, 1,	250, 1,
-    "RMD",  1, 1, 1,	250, 1,
-    "SITE", 1, 0, 1,	200, 0,
-    "SIZE", 1, 1, 1,	213, 1,
-    "SMNT", 1, 0, 0,	250, 0,
-    "STAT", 1, 1, 1,	211, 0,			/* oder 212, 213 */
-    "STRU", 1, 0, 0,	0, /* 200, */ 0,	/* wird nicht unterstuetzt */
-    "SYST", 0, 0, 0,	215, 0,
-    "TYPE", 1, 0, 0,	200, 0,
+    { "ABOR", 0, 0, 0,	225, 1 },		/* oder 226 */
+    { "ACCT", 1, 0, 0,	230, 0 },
+    { "CDUP", 1, 1, 1,	200, 1 },
+    { "CWD",  1, 1, 1,	250, 1 },
+    { "DELE", 1, 1, 1,	250, 1 },
+    { "NOOP", 0, 0, 0,	200, 0 },
+    { "MDTM", 1, 1, 1,	257, 1 },
+    { "MKD",  1, 1, 1,	257, 1 },
+    { "MODE", 1, 0, 0,	200, 0 },
+    { "PWD",  0, 0, 0,	257, 0 },
+    { "QUIT", 0, 0, 0,	221, 0 },
+    { "REIN", 0, 0, 0,	0, /* 220, */ 0 },	/* wird nicht unterstuetzt */
+    { "REST", 1, 0, 0,	350, 0 },
+    { "RNFR", 1, 1, 1,	350, 1 },
+    { "RNTO", 1, 1, 1,	250, 1 },
+    { "RMD",  1, 1, 1,	250, 1 },
+    { "SITE", 1, 0, 1,	200, 0 },
+    { "SIZE", 1, 1, 1,	213, 1 },
+    { "SMNT", 1, 0, 0,	250, 0 },
+    { "STAT", 1, 1, 1,	211, 0 },			/* oder 212, 213 */
+    { "STRU", 1, 0, 0,	0, /* 200, */ 0 },	/* wird nicht unterstuetzt */
+    { "SYST", 0, 0, 0,	215, 0 },
+    { "TYPE", 1, 0, 0,	200, 0 },
+    { "XCWD", 1, 1, 1,	250, 1 },
+    { "XMKD", 1, 1, 1,	257, 1 },
+    { "XPWD", 0, 0, 0,	257, 0 },
+    { "XRMD", 1, 1, 1,	250, 1 },
 
 	/*
 	 * Nur der Vollstaendigkeit halber: FTP Kommandos die gesondert
 	 * behandelt werden.
 	 */
 
-    "LIST", 1, 1, 1,	0, 0,
-    "NLST", 1, 1, 1,	0, 0,
-    "PORT", 1, 0, 0,	0, /* 200, */ 0,
-    "PASV", 1, 0, 0,	0, /* 200, */ 0,
-    "ALLO", 1, 0, 0,	0, /* 200, */ 0,
-    "RETR", 1, 1, 1,	0, 0,
-    "STOR", 1, 1, 1,	0, 0,
-    "STOU", 0, 0, 1,	0, 0,
-    "APPE", 1, 1, 1,	0, 0,
-    "HELP", 0, 0, 0,	0, 0,
-    "",     0, 0, 0,	0, 0
+    { "LIST", 1, 1, 1,	0, 0 },
+    { "NLST", 1, 1, 1,	0, 0 },
+    { "PORT", 1, 0, 0,	0, /* 200, */ 0 },
+    { "PASV", 1, 0, 0,	0, /* 200, */ 0 },
+    { "ALLO", 1, 0, 0,	0, /* 200, */ 0 },
+    { "RETR", 1, 1, 1,	0, 0 },
+    { "STOR", 1, 1, 1,	0, 0 },
+    { "STOU", 0, 0, 1,	0, 0 },
+    { "APPE", 1, 1, 1,	0, 0 },
+    { "HELP", 0, 0, 0,	0, 0 },
+    { "",     0, 0, 0,	0, 0 }
     };
 
 
@@ -188,11 +192,12 @@ int getc_fd(ftp_t *x, int fd)
 		}
 
 	if (bio->here >= bio->len) {
-		int	rc, max, bytes;
+		int	rc, max, bytes, earlyreported;
 		struct timeval tov;
 		fd_set	available, fdset;
 
 		bio->len = bio->here = 0;
+		earlyreported = 0;
 
 		FD_ZERO(&fdset);
 		FD_SET(fd, &fdset);
@@ -256,6 +261,7 @@ int getc_fd(ftp_t *x, int fd)
 					int	sock, adrlen;
 					struct sockaddr_in adr;
 
+					earlyreported = 0;
 					adrlen = sizeof(struct sockaddr);
 					sock = accept(x->ch.active, (struct sockaddr *) &adr, &adrlen);
 					if (sock < 0) {
@@ -352,6 +358,15 @@ int getc_fd(ftp_t *x, int fd)
 					}
 				else if (x->ch.state == PORT_CONNECTED) {
 					char	buffer[MAXBSIZE + 10];
+
+					if (x->ch.operation == 0) {
+						if (earlyreported == 0) {
+							earlyreported = 1;
+							syslog(LOG_NOTICE, "early write/read event, sleeping 2 seconds");
+							sleep(2);
+							continue;
+							}
+						}
 
 					bytes = read(x->ch.active, buffer, x->config->bsize /* sizeof(buffer) */ );
 					if (bytes > 0) {
@@ -610,16 +625,35 @@ int doport(ftp_t *x, char *command, char *par)
 	*p++ = ',';
 	snprintf (p, 20, "%u,%u", ch->outside.port >> 8, ch->outside.port & 0xFF);
 
+
+	/* Open port first */		
+	ch->isock  = -1;
+	ch->mode   = MODE_PORT;
+	ch->state  = PORT_LISTEN;
+
+	/* then send PORT cmd */
 	rc = sfputc(x, "PORT", line, line, sizeof(line), &p);
-	if (rc != 200)
+
+	/* check return code */
+	if (rc != 200){
+		cfputs(x, "500 not accepted");
+		close_ch(x, &x->ch);
+		}
+	else 
+		cfputs(x, "200 ok, port allocated");
+
+
+
+/*	if (rc != 200)
 		cfputs(x, "500 not accepted");
 	else {
 		cfputs(x, "200 ok, port allocated");
-		ch->isock  = -1;
 
+		ch->isock  = -1;
 		ch->mode   = MODE_PORT;
 		ch->state  = PORT_LISTEN;
 		}
+*/
 
 	*ch->command = 0;
 	return (rc);
@@ -680,7 +714,7 @@ int dopasv(ftp_t *x, char *command, char *par)
 	if (debug)
 		fprintf (stderr, "listening on %s:%u\n", ch->inside.ipnum, ch->inside.port);
 
-	snprintf (line, sizeof(line) - 2, "227 ok, entering passive mode %s,%u,%u",
+	snprintf (line, sizeof(line) - 2, "227 ok, entering passive mode (%s,%u,%u)",
 			ch->inside.ipnum,
 			ch->inside.port >> 8, ch->inside.port & 0xFF);
 	for (p=line; (c = *p) != 0; p++) {
@@ -1318,9 +1352,18 @@ int proxy_request(config_t *config)
 			if (*x->ch.command != 0)
 				syslog(LOG_NOTICE, "%s %s: %ld bytes", x->ch.command, x->ch.filename, x->ch.bytes);
 
-/*			sfputc(x, NULL, NULL, line, sizeof(line), NULL); */
-			sfgets(x, line, sizeof(line));
+
+			/*
+			 * Handle multiline server responses after the
+			 * data transfer.
+			 */
+
+			sfputc(x, NULL, NULL, line, sizeof(line), NULL);
 			cfputs(x, line);
+
+/*			sfgets(x, line, sizeof(line));
+ *			cfputs(x, line);
+ */
 
 			continue;
 			}

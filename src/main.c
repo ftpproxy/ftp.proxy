@@ -4,7 +4,7 @@
     File: ftpproxy/main.c
 
     Copyright (C) 1999, 2000  Wolfgang Zekoll  <wzk@quietsche-entchen.de>
-    Copyright (C) 2000, 2001  Andreas Schoenberg  <asg@compucation.de>
+    Copyright (C) 2000, 2001  Andreas Schoenberg  <asg@daemons.de>
   
     This software is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -49,6 +49,8 @@
 
 char	*program =		"";
 char	progname[80] =		"";
+
+static char	*version =	"ftp.proxy version: 1.08  asg@daemons.de";
 
 int	debug =			0;
 int	extralog =		0;
@@ -148,6 +150,10 @@ int main(int argc, char *argv[], char *envp[])
 
 				config->bsize = atoi(argv[k++]);
 				}
+			else if (c == 'V'){
+ 				printf("%s\n", version);
+ 				exit (0);
+ 				}	
 			else {
 				fprintf (stderr, "%s: unknown option: -%c\n", program, c);
 				exit (-1);

@@ -13,7 +13,7 @@
 .in -0.5i
 .sp
 ..
-.TH FTP.PROXY 1 "21 MARCH 2000"
+.TH FTP.PROXY 1 "13 NOVEMBER 2001"
 .SH NAME
 ftp.proxy \- FTP proxy server
 .SH SYNOPSIS
@@ -38,13 +38,15 @@ It can't bind to a TCP/IP port on it's own.
 supports the following FTP commands:
 .PP
 .RS
-ABOR, ACCT, APPE, CDUP, CWD, DELE, LIST, MKD,
+ABOR, ACCT, APPE, CDUP, CWD, DELE, LIST, MDTM,
 .br
-MODE, NLIST, NOOP, PASS, PASV, PORT, PWD, QUIT,
+MKD, MODE, NLIST, NOOP, PASS, PASV, PORT, PWD,
 .br
-RETR, REST, RNFR, RNTO, RMD, SITE, SIZE, SMNT,
+QUIT, RETR, REST, RNFR, RNTO, RMD, SITE, SIZE,
 .br
-STAT, STOR, SYST, TYPE, USER
+SMNT, STAT, STOR, SYST, TYPE, USER ,XCWD, XMKD,
+.br
+XPWD, XRMD
 .br
 .PP
 .RE
@@ -111,9 +113,11 @@ If a command control program (ccp) is given with the \fB-c\fR option this
 program is called for the FTP commands
 .PP
 .RS
-APPE, CDUP, CWD, DELE, LIST, MKD, NLST,
+APPE, CDUP, CWD, DELE, LIST, MDTM, MKD,
 .br
-RETR, RNFR, RNTO, RMD, STAT, STOR, STOU
+NLST, RETR, RNFR, RNTO, RMD, SIZE, STAT,
+.br
+STOR, STOU, XCWD, XMKD, XRMD
 .br
 .PP
 .RE
@@ -153,9 +157,11 @@ on the server side.
 With this information the file parameter for the commands
 .PP
 .RS
-APPE, CDUP, CWD, DELE, LIST, MKD, NLST,
+APPE, CDUP, CWD, DELE, LIST, MDTM, MKD
 .br
-RETR, RNFR, RNTO, RMD, STOR
+NLST, RETR, RNFR, RNTO, RMD, SIZE, STOR,
+.br
+XCWD, XMKD, XRMD
 .br
 .PP
 .RE
@@ -222,6 +228,16 @@ specify a different FTP timeout in seconds than the default of 900 (15 minutes).
 \fB-v\fR \fIprefix\fR
 set \fIprefix\fR as variable prefix for the variable passwd to the access
 and command control program.
+.TP
+\fb-z\fR \fIsize\fR
+sets the amount of data in bytes ftp.proxy tries to read with one system call
+from either the client or the server.
+The default is 1024 bytes, valid values range from 1 to 4096.
+Playing around with larger values than the default may increase the
+proxy's data troughput.
+.TP
+\fB-V\fR
+show version number
 .PP
 .SH "SEE ALSO"
 .IR inetd (1),

@@ -1,0 +1,36 @@
+to be completed ...
+
+
+ 1. Building
+
+	Same old story:
+	
+	make
+	make install
+
+
+ 2. Installation
+
+	After you sucessfully built and installed the daemon, you add an
+	entry to your system's inentd.conf depending on your needs:
+
+	-  clientside server selection: 
+
+		ftp     stream  tcp     nowait  nobody  /usr/sbin/tcpd  /usr/local/sbin/ftp.proxy -e
+
+	- clientside server selection with enhanced logging: 
+
+		ftp     stream  tcp     nowait  nobody  /usr/sbin/tcpd  /usr/local/sbin/ftp.proxy -e -l -m
+
+	- only to one particular FTP-Server:
+
+		ftp     stream  tcp     nowait  nobody  /usr/sbin/tcpd  /usr/local/sbin/ftp.proxy my.outside.server 
+
+
+ 3. Advanced Features
+
+	ftp.proxy has some advanced features not found in other FTP proxies:
+	advanced access control, command control and monitor mode.  They are
+	explained in the manpage.
+
+Good luck !
