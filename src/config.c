@@ -175,7 +175,6 @@ int readconfig(config_t *config, char *filename, char *section)
 			config->monitor = get_yesno(&p, word, filename, lineno);
 		else if (strcmp(word, "proxy-routing") == 0)
 			config->use_last_at = get_yesno(&p, word, filename, lineno);
-
 		else if (strcmp(word, "selectserver") == 0) {
 			config->selectserver = get_yesno(&p, word, filename, lineno);
 			*config->server = 0;
@@ -186,6 +185,8 @@ int readconfig(config_t *config, char *filename, char *section)
 			}
 		else if (strcmp(word, "serverlist") == 0)
 			config->serverlist = strdup(skip_ws(p));
+		else if (strcmp(word, "sourceip") == 0)
+			get_parameter(&p, word, config->sourceip, sizeof(config->sourceip), filename, lineno);
 
 		else if (strcmp(word, "bind") == 0) {
 			bindport = get_number(&p, word, filename, lineno);
@@ -196,6 +197,8 @@ int readconfig(config_t *config, char *filename, char *section)
 			if (config->timeout < 60)
 				config->timeout = 60;
 			}
+		else if (strcmp(word, "xferlog") == 0)
+			get_parameter(&p, word, config->xferlog, sizeof(config->xferlog), filename, lineno);
 		else {
 			fprintf (stderr, "%s: unknown parameter: %s, %s:%d\n", program, word, filename, lineno);
 			exit (1);

@@ -147,6 +147,18 @@ int main(int argc, char *argv[], char *envp[])
 				if (config->dataport == 0)
 					config->dataport = 20;
 				}
+			else if (c == 'q') {
+
+				/*
+				 * Specify source interface for outgoing
+				 * connections -- 26JAN04asg
+				 */
+
+				if (k >= argc)
+					missing_arg(c, "source interface");
+
+				copy_string(config->sourceip, argv[k++], sizeof(config->sourceip));
+				}
 			else if (c == 's') {
 				if (k >= argc)
 					missing_arg(c, "server list");
@@ -175,6 +187,12 @@ int main(int argc, char *argv[], char *envp[])
 
                                 copy_string(config->ctp, argv[k++], sizeof(config->ctp));
                                 }
+			else if (c == 'X') {
+				if (k >= argc)
+					missing_arg(c, "xferlog file");
+
+				copy_string(config->xferlog, argv[k++], sizeof(config->xferlog));
+				}
 			else if (c == 'y') {
 				
 				/*

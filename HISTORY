@@ -2,6 +2,15 @@
 ** Notice: Version 1.0.2 - 1.0.6 and 1.0.9 - 1.1.1 were never released
            to the public.
 
+Version 1.2.3
+- --------------------------------
+
+  * Added optional xferlog logging.
+  
+  * Added -q option to set the source IP of the outgoing control
+    connection (which set also the IP for data connections).
+
+
 Version 1.2.2 - 16122003asg
 - --------------------------------
 

@@ -28,11 +28,12 @@ The FTP server can be either given on the command line or supplied by the
 client.
 .PP
 .I ftp.proxy
-must be started from a TCP superserver like
+can be started from a TCP superserver like
 .IR inetd (1)
 or
 .IR tcpproxy (1).
-It can't bind to a TCP/IP port on it's own.
+but can also bind to a TCP/IP port on it's own and run in standalone (or
+daemon) mode.
 .SS "Protocol Support"
 .I ftp.proxy
 supports the following FTP commands:
@@ -57,7 +58,7 @@ By default \fIftp.proxy\fR does not accept blanks in command parameters.
 This is to protect your UNIX server against users who work on computers where
 these things are usual.
 .PP
-To allow blanks the option \fB-b\fR must be given on the commans line.
+To allow blanks the option \fB-b\fR must be given on the command line.
 Notice that blanks at the beginning or end of the parameter are still
 not supported.
 .PP
@@ -65,8 +66,9 @@ The `SITE' is in neither case affected by this limitation, \fIftp.proxy\fR
 accepts always blanks in `SITE' parameters.
 .PP
 The option -y enables \fIftp.proxy\fR to accept data connections from different
-remote interfaces. Try to avoid using this option, because it can cause
-security problems. (see HISTORY for details) 
+remote interfaces.
+Try to avoid using this option, because it can cause
+security problems (see HISTORY for details).
 .SS "Server Selection"
 If client-side server selection it turned on with the \fB-e\fR option
 the user must select the FTP server he wants to use with
@@ -142,9 +144,9 @@ as variable names.
 Furthermore the case of the variable names doesn't matter and any whitespace
 around \fIvalue\fR is ignored.
 .PP
-The tcp can deny the proxy request by exiting with an non-zero exit code,
+The ctp can deny the proxy request by exiting with an non-zero exit code,
 In which case \fIftp.proxy\fR drops the connection immediately.
-Alternativly the tcp can also print a line starting with \fB-ERR\fR,
+Alternativly the ctp can also print a line starting with \fB-ERR\fR,
 which is written to syslog before the connection is closed.
 .SS "Command Control"
 If a command control program (ccp) is given with the \fB-c\fR option this
@@ -274,8 +276,15 @@ sets the connection's FTP server, disables \fBselectserver\fR.
 specifies a command separated list of servers to which the clients are
 allowed to connect (\fB-s\fR option).
 .TP
+\fIsourceip\fR \fIip-number\fR
+defines the IP address for the outgoing control connection to the remote
+server, which also determines the local IP address for data transmissions.
+.TP
 \fItimeout\fR \fItimeout\fR
 set the timeout in seconds.
+.TP
+\fIxferlog\fR \fIfilename\fR
+sets the location of the xferlog file and enables xferlog logging.
 .PP
 Notice that the file can contain comments and blank lines (usual UN*X-style)
 but \fIftp.proxy\fR terminates immediately with an error code if an
@@ -306,7 +315,7 @@ give the option without a value, this would be considered as `bad
 configuration option'.
 Instead you must supply a single dash `\fB-\fR' to clear an option.
 .SS "Configuration checking"
-\fIftp.proxy\fR prints an error message and terminates immediately if it find
+\fIftp.proxy\fR prints an error message and terminates immediately if it finds
 an unknown or bad configuration option.
 More worse, these error messages are printed to \fIftp.proxy\fR's stderr
 and not to syslog which makes it a little bit difficult to observe.
@@ -364,6 +373,9 @@ tell \fIftp.proxy\fR to use \fIport\fR as source port for data
 transfers (using port number 20 is FTP standard).
 Keep in mind that port numbers below 1024 require root permissions.
 .TP
+\fB-q\fR \fIsourceip\fR
+sets the IP number for the outgoing control connection.
+.TP
 \fB-s\fR \fIlist\fR
 the FTP server selected by the client must match one of the pattern
 from the comma separated \fIlist\fR.
@@ -384,6 +396,9 @@ and command control program.
 \fB-x\fR \fIctp\fR
 set a connection translation program to overwrite the server and login
 information supplied by the user.
+.TP
+\fB-X\fR \fIfile\fR
+write xferlog loggin to \fIfile\fR.
 .TP
 \fB-V\fR
 show version number

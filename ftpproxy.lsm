@@ -1,8 +1,8 @@
 
 Begin3
 Title:			ftpproxy
-Version:		1.2.2
-Entered-date:		16 December 2003
+Version:		1.2.3
+Entered-date:		30 July 2004
 Description:		FTP proxy with optional access and command control
 			and client monitoring.
 Keywords:		FTP, proxy, firewall

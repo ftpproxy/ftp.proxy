@@ -346,7 +346,7 @@ int getc_fd(ftp_t *x, int fd)
 						if (debug)
 							fprintf (stderr, "isock= %d\n", x->ch.isock);
 
-						if ((x->ch.osock = openip(x->ch.server.ipnum, x->ch.server.port, NULL, 0)) < 0) {
+						if ((x->ch.osock = openip(x->ch.server.ipnum, x->ch.server.port, x->config->sourceip, 0)) < 0) {
 							syslog(LOG_NOTICE, "-ERR: can't connect to server: %s", strerror(errno));
 							exit (1);
 							}
@@ -403,6 +403,7 @@ int getc_fd(ftp_t *x, int fd)
 						fprintf (stderr, "active= %d, other= %d\n", x->ch.active, x->ch.other);
 
 					x->ch.bytes = 0;
+					x->ch.started = time(NULL);
 					}
 				else if (x->ch.state == PORT_CONNECTED) {
 					int	wrote;
@@ -1605,7 +1606,7 @@ int dologin(ftp_t *x)
 	 * Establish connection to the server
 	 */
 
-	if ((x->fd.server = openip(x->server.name, x->server.port, NULL, 0)) < 0) {
+	if ((x->fd.server = openip(x->server.name, x->server.port, x->config->sourceip, 0)) < 0) {
 		cfputs(x, "500 service unavailable");
 		syslog(LOG_NOTICE, "-ERR: can't connect to server: %s", x->server.name);
 		exit (1);
@@ -1792,6 +1793,25 @@ int proxy_request(config_t *config)
 		return (0);
 
 
+	/*
+	 * Open the xferlog if we have one.
+	 */
+
+	if (*x->config->xferlog != 0) {
+		if (*x->server.name == 0)
+			copy_string(x->logusername, x->username, sizeof(x->logusername));
+		else if (x->server.port != 21)
+			snprintf (x->logusername, sizeof(x->logusername), "%s@%s:%u", x->username, x->server.name, x->server.port);
+		else
+			snprintf (x->logusername, sizeof(x->logusername), "%s@%s", x->username, x->server.name);
+
+		x->xlfp = fopen(x->config->xferlog, "a");
+		if (x->xlfp == NULL) {
+			syslog(LOG_NOTICE, "-WARN: can't open xferlog: %s, error= %s",
+					x->config->xferlog, strerror(errno));
+			}
+		}
+
 	if (x->config->monitor) {
 		get_ftpdir(x);
 		copy_string(x->home, x->cwd, sizeof(x->home));
@@ -1799,9 +1819,37 @@ int proxy_request(config_t *config)
 
 	while ((p = cfgets(x, line, sizeof(line))) != NULL) {
 		if (*p == '\001') {
-			if (*x->ch.command != 0)
+			if (*x->ch.command != 0) {
 				syslog(LOG_NOTICE, "%s %s: %ld bytes", x->ch.command, x->ch.filename, x->ch.bytes);
 
+				if (x->xlfp != NULL) {
+					unsigned long now;
+					char	date[80];
+
+					/*
+					 * Write xferlog entry but notice that (1) session are never
+					 * flagged as anonymous and (2) the transfer type is always
+					 * binary (type flag was added to data channel but is
+					 * actually not used. 10MAY04wzk
+					 */
+
+					now = time(NULL);
+					copy_string(date, ctime(&now), sizeof(date));
+					fprintf (x->xlfp, "%s %lu %s %lu %s %c %c %c %c %s %s %d %s %c\n",
+							date,
+							now - x->ch.started,
+							x->client_ip,
+							x->ch.bytes,
+							x->ch.filename,
+							'b',		/* x->ch.type == TYPE_ASC? 'a': 'b', */
+							'-',
+							strcmp(x->ch.command, "RETR")? 'i': 'o',
+							'u',		/* x->isanonymous == 1? 'a': 'u', */
+							x->logusername,
+							"ftp", 1, x->logusername, 'c');
+					fflush(x->xlfp);
+					}
+				}
 
 			/*
 			 * Handle multiline server responses after the
@@ -1811,14 +1859,7 @@ int proxy_request(config_t *config)
 			sfputc(x, NULL, NULL, line, sizeof(line), NULL);
 			cfputs(x, line);
 
-/*			sfgets(x, line, sizeof(line));
- *			cfputs(x, line);
- */
-
 			continue;
-			/*
-			 * Write xferlog here 
-			 */
 			}
 
 		p = noctrl(line);

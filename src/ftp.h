@@ -66,8 +66,10 @@ typedef struct _config {
     int		use_last_at;
     int		monitor;
     int		bsize;
+    char	xferlog[200];
 
     int		numeric_only;
+    char	sourceip[200];
     unsigned int dataport;
     } config_t;
 
@@ -89,6 +91,8 @@ typedef struct _config {
 #define	OP_GET			1
 #define	OP_PUT			2
 
+#define	TYPE_ASC		1	/* Transfer modes for xferlog */
+#define	TYPE_BIN		2
 
 typedef struct _port {
     char	ipnum[80];
@@ -111,6 +115,9 @@ typedef struct _dtc {
     port_t	outside;
     port_t	inside;
     port_t	client;
+
+    int		type;		/* Transfer type for xferlog */
+    unsigned long started;	/* Timestamp for xferlog */
 
     char	command[20];	/* Fuer syslog Meldungen */
     char	filename[200];
@@ -167,7 +174,10 @@ typedef struct _ftp {
     
     char		session[80];
     int			ccpcoll;
-    
+ 
+    FILE		*xlfp;
+    char		logusername[100];
+
     int			commands;
     unsigned long datain, dataout;
     } ftp_t;
