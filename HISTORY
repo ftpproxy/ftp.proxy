@@ -2,9 +2,24 @@
 ** Notice: Version 1.0.2 - 1.0.6 and 1.0.9 - 1.1.1 were never released
            to the public.
 
+Version 1.1.6.beta6 - 22JAN2003asg
+- ----------------------------------
 
-Version 1.1.6 - 28DEC2002asg
-- --------------------------
+  * Added sample script to start ftp.proxy in debug mode.
+	
+  * Added sample trp script.
+
+  * Do not fork ftp.proxy in daemon mode when debug option is set.
+
+  * Changed syslog calls to be more ANSI-C conform.
+
+  * Source code compatibility: changed the syslog's `%m' to `%s' with
+    a `strerror(errno)' argument.
+
+  * Added support connection translation program (short: trp's), mentioned
+    by Damian Ivereigh.
+
+  * Introduced version variable in Makefile.
 
   * Added new command line option '-u' to allow usernames with a '@'
     in it. Mentioned by Paul Dragicevich.

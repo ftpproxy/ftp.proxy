@@ -13,7 +13,7 @@
 .in -0.5i
 .sp
 ..
-.TH FTP.PROXY 1 "10 DECEMBER 2002"
+.TH FTP.PROXY 1 "23 JANUARY 2003"
 .SH NAME
 ftp.proxy \- FTP proxy server
 .SH SYNOPSIS
@@ -112,6 +112,33 @@ the colon and the remaining right side is passed on to the server.
 Furthermore the acp's stdout is connected to the FTP client and
 it's stderr is read by \fIftp.proxy\fR which writes the acp's stderr output
 to syslog.
+.PP
+Notice also that a non-zero trp exit code signals \fIftp.proxy\fR that
+something's wrong and that \fIftp.proxy\fR should terminate.
+.SS "Connection Translation"
+Beginning with version 1.1.6 \fIftp.proxy\fR supports connection
+translation programs (trp's).
+A trp can completly overwrite the user's server selection and login.
+A trp receives the same environment variables like an acp and
+returns server and login information on it's stdout.
+The format of the trp output lines is
+.EX "\fIvariable\fR \fB<whitespace>\fR|\fB=\fR [\fB<whitespace>\fR] \fIvalue\fR"
+where \fIvariable\fR is one of
+.PP
+.RS
+SERVERNAME, SERVERLOGIN, SERVERPASSWD, SERVERPORT 
+.PP
+.RE
+and \fIvalue\fR the corresponding value.
+Alternativly to these four variables you can use the shorter forms
+.PP
+.RS
+SERVER, LOGIN, PASSWD, PORT 
+.PP
+.RE
+as variable names.
+Furthermore the case of the variable names doesn't matter and any whitespace
+around \fIvalue\fR is ignored.
 .SS "Command Control"
 If a command control program (ccp) is given with the \fB-c\fR option this
 program is called for the FTP commands
@@ -240,6 +267,10 @@ abused to do 'proxy hopping'!
 \fB-v\fR \fIprefix\fR
 set \fIprefix\fR as variable prefix for the variable passwd to the access
 and command control program.
+.TP
+\fB-x\fR \fItrp\fR
+set a connection translation program to overwrite the server and login
+information supplied by the user.
 .TP
 \fB-V\fR
 show version number

@@ -1,6 +1,6 @@
 
 CC =		gcc
-CFLAGS =	-O2 -Wall -ggdb -pedantic
+CFLAGS =	-O2 -Wall -ggdb -pedantic -DVERSION=\"$(VERSION)\"
 
 FTPPROXY =	main.o ftp.o daemon.o ip-lib.o lib.o
 

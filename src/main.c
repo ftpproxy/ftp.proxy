@@ -4,7 +4,7 @@
     File: ftpproxy/main.c
 
     Copyright (C) 1999, 2000  Wolfgang Zekoll  <wzk@quietsche-entchen.de>
-    Copyright (C) 2000, 2002  Andreas Schoenberg  <asg@ftpproxy.org>
+    Copyright (C) 2000, 2003  Andreas Schoenberg  <asg@ftpproxy.org>
   
     This software is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -53,7 +53,6 @@
 #define LOGFACILITY	LOG_DAEMON
 #endif
 
-char *version = "ftp.proxy version: 1.1.6";
 
 char	*program =		"";
 char	progname[80] =		"";
@@ -161,6 +160,12 @@ int main(int argc, char *argv[], char *envp[])
 
 				copy_string(config->varname, argv[k++], sizeof(config->varname));
 				}
+                        else if (c == 'x') {
+                                if (k >= argc)
+                                        missing_arg(c, "connection translation program");
+
+                                copy_string(config->trp, argv[k++], sizeof(config->trp));
+                                }
 			else if (c == 'y') {
 				
 				/*
@@ -178,7 +183,7 @@ int main(int argc, char *argv[], char *envp[])
 				config->bsize = atoi(argv[k++]);
 				}
 			else if (c == 'V') {
- 				printf("%s asg@ftpproxy.org\n", version);
+ 				printf("ftp.proxy version: %s asg@ftpproxy.org\n", VERSION);
  				exit (0);
  				}	
 			else if (c == 'D')

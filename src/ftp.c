@@ -4,7 +4,7 @@
     File: ftpproxy/ftp.c
 
     Copyright (C) 1999, 2000  Wolfgang Zekoll  <wzk@quietsche-entchen.de>
-    Copyright (C) 2000, 2002  Andreas Schoenberg  <asg@ftpproxy.org>
+    Copyright (C) 2000, 2003  Andreas Schoenberg  <asg@ftpproxy.org>
   
     This software is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -121,7 +121,7 @@ unsigned get_interface_info(int pfd, char *ip, int max)
 
 	size = sizeof(saddr);
 	if (getsockname(pfd, (struct sockaddr *) &saddr, &size) < 0) {
-		syslog(LOG_NOTICE, "-ERR: can't get interface info: %m");
+		syslog(LOG_NOTICE, "-ERR: can't get interface info: %s", strerror(errno));
 		exit (-1);
 		}
 
@@ -248,7 +248,7 @@ int getc_fd(ftp_t *x, int fd)
 
 			rc = select(max + 1, &available, (fd_set *) NULL, (fd_set *) NULL, &tov);
 			if (rc < 0) {
-				syslog(LOG_NOTICE, "select() error: %m\n");
+				syslog(LOG_NOTICE, "select() error: %s\n", strerror(errno));
 				break;
 				}
 			else if (rc == 0) {
@@ -283,7 +283,7 @@ int getc_fd(ftp_t *x, int fd)
 						fprintf (stderr, "accept() on socket\n");
 
 					if (sock < 0) {
-						syslog(LOG_NOTICE, "-ERR: accept error: %m");
+						syslog(LOG_NOTICE, "-ERR: accept error: %s", strerror(errno));
 						exit (1);
 						}
 					else {
@@ -331,7 +331,7 @@ int getc_fd(ftp_t *x, int fd)
 							fprintf (stderr, "osock= %d\n", x->ch.osock);
 
 						if ((x->ch.isock = openip(x->ch.client.ipnum, x->ch.client.port, x->interface, x->config->dataport)) < 0) {
-							syslog(LOG_NOTICE, "-ERR: can't connect to client: %m");
+							syslog(LOG_NOTICE, "-ERR: can't connect to client: %s", strerror(errno));
 							exit (1);
 							}
 
@@ -346,7 +346,7 @@ int getc_fd(ftp_t *x, int fd)
 							fprintf (stderr, "isock= %d\n", x->ch.isock);
 
 						if ((x->ch.osock = openip(x->ch.server.ipnum, x->ch.server.port, NULL, 0)) < 0) {
-							syslog(LOG_NOTICE, "-ERR: can't connect to server: %m");
+							syslog(LOG_NOTICE, "-ERR: can't connect to server: %s", strerror(errno));
 							exit (1);
 							}
 
@@ -907,11 +907,11 @@ int run_acp(ftp_t *x)
 
 	rc = 0;
 	if (pipe(pfd) != 0) {
-		syslog(LOG_NOTICE, "-ERR: can't pipe: %m");
+		syslog(LOG_NOTICE, "-ERR: can't pipe: %s", strerror(errno));
 		exit (1);
 		}
 	else if ((pid = fork()) < 0) {
-		syslog(LOG_NOTICE, "-ERR: can't fork acp: %m");
+		syslog(LOG_NOTICE, "-ERR: can't fork acp: %s", strerror(errno));
 		exit (1);
 		}
 	else if (pid == 0) {
@@ -928,7 +928,7 @@ int run_acp(ftp_t *x)
 		argv[argc] = NULL;
 		execvp(argv[0], argv);
 
-		syslog(LOG_NOTICE, "-ERR: can't exec acp %s: %m", argv[0]);
+		syslog(LOG_NOTICE, "-ERR: can't exec acp %s: %s", argv[0], strerror(errno));
 		exit (1);
 		}
 	else {
@@ -945,7 +945,7 @@ int run_acp(ftp_t *x)
 		close(pfd[0]);
 
 		if (waitpid(pid, &rc, 0) < 0) {
-			syslog(LOG_NOTICE, "-ERR: error while waiting for acp: %m");
+			syslog(LOG_NOTICE, "-ERR: error while waiting for acp: %s", strerror(errno));
 			exit (1);
 			}
 
@@ -960,6 +960,100 @@ int run_acp(ftp_t *x)
 	return (rc);
 }
 
+static char *getvarname(char **here, char *var, int size)
+{
+	int	c, k;
+
+	size = size - 2;
+	k = 0;
+	while ((c = **here) != 0) {
+		*here += 1;
+		if (c == ' '  ||  c == '\t'  ||  c == '=')
+			break;
+
+		if (k < size)
+			var[k++] = c;
+		}
+
+	var[k] = 0;
+	strupr(var);
+	*here = skip_ws(*here);
+
+	return (var);
+}
+
+int run_trp(ftp_t *x)
+{
+	int	rc, pid, pfd[2];
+	char	line[300];
+	char	*p;
+	FILE	*fp;
+	
+	if (*x->config->trp == 0)
+		return (0);
+
+	rc = 0;
+	if (pipe(pfd) != 0) {
+		syslog(LOG_NOTICE, "-ERR: can't pipe: %s", strerror(errno));
+		exit (1);
+		}
+	else if ((pid = fork()) < 0) {
+		syslog(LOG_NOTICE, "-ERR: can't fork trp: %s", strerror(errno));
+		exit (1);
+		}
+	else if (pid == 0) {
+		int	argc;
+		char	*argv[32];
+
+		close(0);		/* Das trp kann nicht vom client lesen. */
+		dup2(pfd[1], 1);	/* stdout wird vom parent gelesen. */
+		close(pfd[0]);
+		set_variables(x);
+			
+		copy_string(line, x->config->trp, sizeof(line));
+		argc = split(line, argv, ' ', 30);
+		argv[argc] = NULL;
+		execvp(argv[0], argv);
+
+		syslog(LOG_NOTICE, "-ERR: can't exec trp %s: %s",
+			argv[0], strerror(errno));
+		exit (1);
+		}
+	else {
+		int	len;
+		char	*p, var[80], line[300];
+
+		close(pfd[1]);
+		fp = fdopen(pfd[0], "r");
+		while (fgets(line, sizeof(line), fp)) {
+			p = skip_ws(noctrl(line));
+			getvarname(&p, var, sizeof(var));
+
+			if (strcmp(var, "SERVERNAME") == 0  ||  strcmp(var, "SERVER") == 0)
+				copy_string(x->server.name, p, sizeof(x->server.name));
+			else if (strcmp(var, "SERVERLOGIN") == 0  ||  strcmp(var, "LOGIN") == 0)
+				copy_string(x->username, p, sizeof(x->username));
+			else if (strcmp(var, "SERVERPASSWD") == 0  ||  strcmp(var, "PASSWD") == 0)
+				copy_string(x->password, p, sizeof(x->password));
+			else if (strcmp(var, "SERVERPORT") == 0  ||  strcmp(var, "PORT") == 0)
+				x->server.port = atoi(p);
+			}
+
+		fclose(fp);
+		if (waitpid(pid, &rc, 0) < 0) {
+			syslog(LOG_NOTICE, "-ERR: error while waiting for trp: %s", strerror(errno));
+			exit (1);
+			}
+
+		rc = WIFEXITED(rc) != 0? WEXITSTATUS(rc): 1;
+		if (rc != 0) {
+			syslog("-ERR: trp signals error condition, rc= %d", rc);
+			exit (1);
+			}
+		}
+
+	return (rc);
+}
 
 int get_ftpdir(ftp_t *x)
 {
@@ -1107,11 +1201,11 @@ int run_ccp(ftp_t *x, char *cmd, char *par)
 
 	rc = 0;
 	if (pipe(pfd) != 0  ||  pipe(lfd)) {
-		syslog(LOG_NOTICE, "-ERR: can't pipe: %m");
+		syslog(LOG_NOTICE, "-ERR: can't pipe: %s", strerror(errno));
 		exit (1);
 		}
 	else if ((pid = fork()) < 0) {
-		syslog(LOG_NOTICE, "-ERR: can't fork ccp: %m");
+		syslog(LOG_NOTICE, "-ERR: can't fork ccp: %s", strerror(errno));
 		exit (1);
 		}
 	else if (pid == 0) {
@@ -1142,7 +1236,7 @@ int run_ccp(ftp_t *x, char *cmd, char *par)
 		argv[argc] = NULL;
 		execvp(argv[0], argv);
 
-		syslog(LOG_NOTICE, "-ERR: can't exec ccp %s: %m", argv[0]);
+		syslog(LOG_NOTICE, "-ERR: can't exec ccp %s: %s", argv[0], strerror(errno));
 		exit (1);
 		}
 	else {
@@ -1191,7 +1285,7 @@ int run_ccp(ftp_t *x, char *cmd, char *par)
 		 */
 
 		if (waitpid(pid, &rc, 0) < 0) {
-			syslog(LOG_NOTICE, "-ERR: error while waiting for ccp: %m");
+			syslog(LOG_NOTICE, "-ERR: error while waiting for ccp: %s", strerror(errno));
 			exit (1);
 			}
 
@@ -1383,6 +1477,21 @@ int dologin(ftp_t *x)
 			exit (0);
 		}
 
+        /*
+         * Translation Program aufrufen.
+         */
+
+        if (*x->config->trp != 0) {
+                if (run_trp(x) != 0)
+                        exit (0);       /* Never happens, we exit in run_trp() */
+
+		if (debug != 0)
+                fprintf (stderr, "trp debug: server= %s:%u, login= %s, passwd= %s",
+                        x->server.name, x->server.port,
+                        x->username, x->password);
+                }
+
+
 	/*
 	 * Verbindung zum Server aufbauen.
 	 */
@@ -1531,7 +1640,7 @@ int proxy_request(config_t *config)
 
 	rc = 1;
 	if (setsockopt(1, SOL_TCP, TCP_NODELAY, &rc, sizeof(rc)) != 0)
-		syslog(LOG_NOTICE, "can't set TCP_NODELAY, error= %m");
+		syslog(LOG_NOTICE, "can't set TCP_NODELAY, error= %s", strerror(errno));
 
 #endif
 
@@ -1556,7 +1665,7 @@ int proxy_request(config_t *config)
 
 
 	if (get_client_info(x, 0) < 0) {
-		syslog(LOG_NOTICE, "-ERR: can't get client info: %m");
+		syslog(LOG_NOTICE, "-ERR: can't get client info: %s", strerror(errno));
 		exit (1);
 		}
 

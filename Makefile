@@ -1,7 +1,9 @@
 
-DIR =		ftpproxy-1.1.6
-TAR =		ftpproxy-1.1.6
+VERSION =	1.1.6.beta6
+DIR =		ftpproxy-$(VERSION)
+TAR =		ftpproxy-$(VERSION)
 
+export VERSION
 
 TARGETS =	ftp.proxy
 
@@ -26,4 +28,4 @@ tar:		clean
 clean:
 	cd src; rm -f *.o cut out $(TARGETS)
 	rm -f $(TAR).tgz
-
+	rm -f src/tags

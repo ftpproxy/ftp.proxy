@@ -209,11 +209,14 @@ int acceptloop(int sock)
 	/*
 	 * Go into background.
 	 */
+	
+	if (debug != 0)
+		; /* Do not fork in debug mode */
 
-	if ((pid = fork()) > 0)
-		exit (1);
+	else if ((pid = fork()) > 0)
+		exit (0);
 
-	fprintf (stderr, "\nstarting %s in daemon mode ...\n", version);
+	fprintf (stderr, "\nstarting ftp.proxy %s in daemon mode ...\n", VERSION);
 	while (1) {
 
 		/*

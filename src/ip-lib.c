@@ -4,6 +4,7 @@
     File: ftpproxy/ip-lib.c
 
     Copyright (C) 1999  Wolfgang Zekoll  <wzk@quietsche-entchen.de>
+    Copyright (C) 2000, 2003  Andreas Schoenberg  <asg@ftpproxy.org>
   
     This software is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -164,7 +165,7 @@ int bind_to_port(char *interface, unsigned int port)
 	int	sock;
 
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		syslog(LOG_NOTICE, "-ERR: can't create socket: %m");
+		syslog(LOG_NOTICE, "-ERR: can't create socket: %s", strerror(errno));
 		exit (-1);
 		}
 	else {
@@ -201,7 +202,7 @@ int bind_to_port(char *interface, unsigned int port)
 		
 		
 	if (listen(sock, 5) < 0) {
-		syslog(LOG_NOTICE, "-ERR: listen error: %m");
+		syslog(LOG_NOTICE, "-ERR: listen error:  %s", strerror(errno));
 		exit (-1);
 		}
 
