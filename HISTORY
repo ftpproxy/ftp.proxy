@@ -1,16 +1,29 @@
 
-** Notice: Version 1.0.2 - 1.0.6 and 1.0.9 - 1.1.1 were never released to the public.
+** Notice: Version 1.0.2 - 1.0.6 and 1.0.9 - 1.1.1 were never released
+           to the public.
+
+Version 1.1.4 - 21Jan2002asg
+- --------------------------
+
+  * Fixed potential problems after immediate initial unseccsesful up/downloads.
+
+  * Fixed error in `cmdtab[]'.  ftp.proxy expected parameter for PASV. 
+
+  * Small modification in request handling to prevent us from the rare case
+    that the ftp.proxy transfers data to/from the client before the client
+    has seen the "150 ..." message.
+
 
 Version 1.1.3 - 06Dec2001asg
 - --------------------------
 
-  * Fixed missing entry in Syslog output. Mentioned by Markus Meitner. 
+  * Fixed missing entry in syslog output.  Mentioned by Markus Meitner. 
   
   * Changed array name MAXBSIZE to FTPMAXBSIZE to solve conflict when
-    compiling under NetBSD or SUN Solaris. Mentioned by Denis Ahrens.  
+    compiling under NetBSD or SUN Solaris.  Mentioned by Denis Ahrens.  
  
-  * Changed path for include wait.h to sys/wait.h in all sources to 
-    improve compatibility to NetBSD or SUN Solaris. 
+  * Changed path for `#include <wait.h>' to `<sys/wait.h>' in all sources
+    to improve compatibility to NetBSD or SUN Solaris. 
     Mentioned by Denis Ahrens.  
 
   * Added support for the XCUP command.
@@ -19,7 +32,7 @@ Version 1.1.3 - 06Dec2001asg
 Version 1.1.2 - 13NOV2001asg
 - --------------------------
 
-  * Added Old X-Commands which are reintroduced by Microsoft W2K
+  * Added old X-Commands which are reintroduced by Microsoft W2K
     FTP-Client (XCWD, XPWD, XMKD, XRMD) see RFC 1123 and RFC 775.   
 
   * Added support for the MDTM command to check the modification
@@ -35,7 +48,7 @@ Version 1.1.2 - 13NOV2001asg
       really handle it due to the way it works.  An artifical sleep(2)
       might work as a work around.
 
-    - There is at least one type of fireall around that didn't like
+    - There is at least one type of firewall around that didn't like
       FTP commands split into two TCP packets.  They disconnected from
       the proxy without any notice.  This problem has been fixed now.
 

@@ -4,7 +4,7 @@
     File: ftpproxy/ftp.c
 
     Copyright (C) 1999, 2000  Wolfgang Zekoll  <wzk@quietsche-entchen.de>
-    Copyright (C) 2000, 2001  Andreas Schoenberg  <asg@daemons.de>
+    Copyright (C) 2000, 2002  Andreas Schoenberg  <asg@ftpproxy.org>
   
     This software is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -41,6 +41,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <syslog.h>
 #include <sys/time.h>
@@ -100,7 +101,7 @@ ftpcmd_t cmdtab[] = {
     { "LIST", 1, 1, 1,	0, 0 },
     { "NLST", 1, 1, 1,	0, 0 },
     { "PORT", 1, 0, 0,	0, /* 200, */ 0 },
-    { "PASV", 1, 0, 0,	0, /* 200, */ 0 },
+    { "PASV", 0, 0, 0,	0, /* 200, */ 0 },
     { "ALLO", 1, 0, 0,	0, /* 200, */ 0 },
     { "RETR", 1, 1, 1,	0, 0 },
     { "STOR", 1, 1, 1,	0, 0 },
@@ -1351,6 +1352,18 @@ int proxy_request(config_t *config)
 	ftp_t	*x;
 
 	set_signals();
+
+	/*
+	 * Set socket options to prevent us from the rare case that
+	 * we transfer data to/from the client before the client has
+	 * seen our "150 ..." message.
+	 */
+
+	rc = 1;
+	if (setsockopt(1, SOL_TCP, TCP_NODELAY, &rc, sizeof(rc)) != 0)
+		syslog(LOG_NOTICE, "can't set TCP_NODELAY, error= %m");
+
+
 	if (config->bsize <= 0)
 		config->bsize = 1024;
 	else if (config->bsize > FTPMAXBSIZE)
@@ -1359,6 +1372,17 @@ int proxy_request(config_t *config)
 	x = allocate(sizeof(ftp_t));
 	x->config = config;
 	snprintf (x->session, sizeof(x->session) - 2, "%lu-%u", time(NULL), getpid());
+
+
+	/*
+	 * Fix potential problems after immediate initial unseccsesful
+	 * up/downloads.  Wasn't a problem since we all do a LIST
+	 * at first.
+	 */
+
+	x->ch.isock = -1;
+	x->ch.osock = -1;
+
 
 	if (get_client_info(x, 0) < 0) {
 		syslog(LOG_NOTICE, "-ERR: can't get client info: %m");
@@ -1402,6 +1426,9 @@ int proxy_request(config_t *config)
  */
 
 			continue;
+			/*
+			 * Write xferlog here 
+			 */
 			}
 
 		p = noctrl(line);

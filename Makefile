@@ -1,26 +1,21 @@
 
-CC =		gcc
-CFLAGS =	-O2 -Wall -ggdb
+DIR =		ftpproxy-1.1.4
+TAR =		ftpproxy-1.1.4
 
-DIR =		ftpproxy-1.1.3
-TAR =		ftpproxy-1.1.3
-
-FTPPROXY =	main.o ftp.o ip-lib.o lib.o
 
 TARGETS =	ftp.proxy
 
 
-all:		$(TARGETS)
-	-ctags *.[ch]
+all:	$(TARGETS)
+	cd src; make all 
 
 install:	all
-	strip $(TARGETS)
-	cp $(TARGETS) /usr/local/sbin
-	cp *.1 /usr/local/man/man1
+	cd src; strip $(TARGETS)  &&  cp $(TARGETS) /usr/local/sbin
+	cd doc; cp *.1 /usr/local/man/man1
 
 
-ftp.proxy:	$(FTPPROXY)
-	$(CC) -o $@ $(FTPPROXY)
+ftp.proxy:
+	cd src; make ftp.proxy 
 
 
 tar:		clean
@@ -28,5 +23,6 @@ tar:		clean
 	mv ../$(TAR).tar.gz .
 	
 clean:
-	rm -f *.o cut out $(TARGETS) $(TAR).tar.gz
+	cd src; rm -f *.o cut out $(TARGETS)
+	rm -f $(TAR).tar.gz
 

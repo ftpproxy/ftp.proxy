@@ -4,7 +4,7 @@
     File: ftpproxy/main.c
 
     Copyright (C) 1999, 2000  Wolfgang Zekoll  <wzk@quietsche-entchen.de>
-    Copyright (C) 2000, 2001  Andreas Schoenberg  <asg@daemons.de>
+    Copyright (C) 2000, 2001  Andreas Schoenberg  <asg@ftpproxy.org>
   
     This software is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -50,7 +50,7 @@
 char	*program =		"";
 char	progname[80] =		"";
 
-static char	*version =	"ftp.proxy version: 1.1.3  asg@daemons.de";
+static char	*version =	"ftp.proxy version: 1.1.4  asg@ftpproxy.org";
 
 int	debug =			0;
 int	extralog =		0;
