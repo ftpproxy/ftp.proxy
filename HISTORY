@@ -1,7 +1,7 @@
 
-** Notice: Version 1.0.2 - 1.0.6 were never released to the public.
+** Notice: Version 1.0.2 - 1.0.6 and 1.0.9 - 1.1.1 were never released to the public.
 
-Version 1.0.8 - 13NOV2001asg
+Version 1.1.2 - 13NOV2001asg
 - --------------------------
 
   * Added Old X-Commands which are reintroduced by Microsoft W2K
@@ -12,13 +12,19 @@ Version 1.0.8 - 13NOV2001asg
 
   * Added new parameter to check Version. (ftp.proxy -V)
 
-  * Attempt to solve early write events:  In some rare cases the FTP
-    server send data through the data channel before the command response
-    was received by the proxy.  ftp.proxy can detect such events but not
-    really handle it due to the way it works.  An artifical sleep(2)
-    might work as a work around.
+  * Enhanced server handling:
 
-  * ftp.proxy handles now multiline responses after a data transfer.
+    - Attempt to solve early write events:  In some rare cases the FTP
+      server send data through the data channel before the command response
+      was received by the proxy.  ftp.proxy can detect such events but not
+      really handle it due to the way it works.  An artifical sleep(2)
+      might work as a work around.
+
+    - There is at least one type of fireall around that didn't like
+      FTP commands split into two TCP packets.  They disconnected from
+      the proxy without any notice.  This problem has been fixed now.
+
+    - ftp.proxy handles now multiline responses after a data transfer.
 
   * Eliminated compiler warning.
 

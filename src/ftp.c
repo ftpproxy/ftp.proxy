@@ -33,6 +33,7 @@
 #include <signal.h>
 #include <wait.h>
 #include <ctype.h>
+#include <errno.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -239,6 +240,9 @@ int getc_fd(ftp_t *x, int fd)
 			tov.tv_sec  = x->config->timeout;
 			tov.tv_usec = 0;
 
+			if (debug >= 2)
+				fprintf (stderr, "select max= %d\n", max);
+
 			rc = select(max + 1, &available, (fd_set *) NULL, (fd_set *) NULL, &tov);
 			if (rc < 0) {
 				syslog(LOG_NOTICE, "select() error: %m\n");
@@ -251,8 +255,16 @@ int getc_fd(ftp_t *x, int fd)
 				}
 
 			if (FD_ISSET(fd, &available)) {
-				if ((bytes = read(fd, bio->buffer, sizeof(bio->buffer) - 2)) <= 0)
+				if ((bytes = read(fd, bio->buffer, sizeof(bio->buffer) - 2)) <= 0) {
+					if (debug != 0) {
+						if (bytes == 0)
+							fprintf (stderr, "received zero bytes on fd %d\n", fd);
+						else
+							fprintf (stderr, "received %d bytes on fd %d, errno= %d, error= %s\n", bytes, fd, errno, strerror(errno));
+						}
+
 					return (-1);
+					}
 
 				break;
 				}
@@ -264,6 +276,9 @@ int getc_fd(ftp_t *x, int fd)
 					earlyreported = 0;
 					adrlen = sizeof(struct sockaddr);
 					sock = accept(x->ch.active, (struct sockaddr *) &adr, &adrlen);
+					if (debug != 0)
+						fprintf (stderr, "accept() on socket\n");
+
 					if (sock < 0) {
 						syslog(LOG_NOTICE, "-ERR: accept error: %m");
 						exit (1);
@@ -476,19 +491,29 @@ char *sfgets(ftp_t *x, char *line, int size)
 
 int sfputs(ftp_t *x, char *format, ...)
 {
-	char	buffer[300];
+	char	buffer[310];
 	va_list	ap;
 
 	va_start(ap, format);
-	vsnprintf (buffer, sizeof(buffer) - 2, format, ap);
+	vsnprintf (buffer, sizeof(buffer) - 10, format, ap);
 	va_end(ap);
 
 	if (debug)
 		fprintf (stderr, ">>> SVR: %s\n", buffer);
 
-	write(x->fd.server, buffer, strlen(buffer));
-	write(x->fd.server, "\r\n", 2);
+	/*
+	 * There are firewalls that don't like command to be split in
+	 * two packets.  Notice: the `- 10' above is really important
+	 * to protect the proxy against buffer overflows.
+	 */
 
+	strcat(buffer, "\r\n");
+	write(x->fd.server, buffer, strlen(buffer));
+
+/*
+ *	write(x->fd.server, buffer, strlen(buffer));
+ *	write(x->fd.server, "\r\n", 2);
+ */
 	return (0);
 }
 
@@ -506,16 +531,24 @@ int sfputc(ftp_t *x, char *command, char *parameter, char *line, int size, char 
 		sfputs(x, buffer);
 		}
 	
-	if (sfgets(x, line, size) == NULL)
+	if (sfgets(x, line, size) == NULL) {
+		if (debug != 0)
+			fprintf (stderr, "server disappered in sfputc(), pos #1\n");
+
 		return (-1);
+		}
 
 	rc = strtol(line, &p, 10);
 	p = skip_ws(p);
 	if (*p == '-') {
 		cfputs(x, line);
 		while (1) {
-			if (sfgets(x, line, size) == NULL)
+			if (sfgets(x, line, size) == NULL) {
+				if (debug != 2)
+					fprintf (stderr, "server disappered in sfputc(), pos #2\n");
+
 				return (-1);
+				}
 
 			p = noctrl(line);
 			if (*p == ' ')
@@ -627,9 +660,9 @@ int doport(ftp_t *x, char *command, char *par)
 
 
 	/* Open port first */		
-	ch->isock  = -1;
-	ch->mode   = MODE_PORT;
-	ch->state  = PORT_LISTEN;
+	ch->isock     = -1;
+	ch->mode      = MODE_PORT;
+	ch->state     = PORT_LISTEN;
 
 	/* then send PORT cmd */
 	rc = sfputc(x, "PORT", line, line, sizeof(line), &p);
@@ -1235,6 +1268,8 @@ int dologin(ftp_t *x)
 		}
 
 	syslog(LOG_NOTICE, "connected to server: %s", x->server.name);
+
+
 	sfgets(x, line, sizeof(line));
 	while (line[3] != ' ') {
 		if (sfgets(x, line, sizeof(line)) == NULL) {
@@ -1242,7 +1277,7 @@ int dologin(ftp_t *x)
 			exit (1);
 			}
 		}
-		
+
 	if (atoi(line) != 220) {
 		cfputs(x, "500 service unavailable");
 		syslog(LOG_NOTICE, "-ERR: unexpected server greeting: %s", line);

@@ -50,7 +50,7 @@
 char	*program =		"";
 char	progname[80] =		"";
 
-static char	*version =	"ftp.proxy version: 1.08  asg@daemons.de";
+static char	*version =	"ftp.proxy version: 1.1.2  asg@daemons.de";
 
 int	debug =			0;
 int	extralog =		0;
@@ -89,8 +89,12 @@ int main(int argc, char *argv[], char *envp[])
 	while (k < argc  &&  argv[k][0] == '-'  &&  argv[k][1] != 0) {
 		copy_string(option, argv[k++], sizeof(option));
 		for (i=1; (c = option[i]) != 0; i++) {
-			if (c == 'd')
-				debug = 1;
+			if (c == 'd') {
+				if (debug == 1)
+					debug = 2;
+				else
+					debug = 1;
+				}
 			else if (c == 'a') {
 				if (k >= argc)
 					missing_arg(c, "access control program");
