@@ -383,6 +383,7 @@ int getc_fd(ftp_t *x, int fd)
 					x->ch.bytes = 0;
 					}
 				else if (x->ch.state == PORT_CONNECTED) {
+					int	wrote;
 					char	buffer[FTPMAXBSIZE + 10];
 
 					if (x->ch.operation == 0) {
@@ -395,11 +396,17 @@ int getc_fd(ftp_t *x, int fd)
 						}
 
 					bytes = read(x->ch.active, buffer, x->config->bsize /* sizeof(buffer) */ );
-					if (bytes > 0) {
-						write(x->ch.other, buffer, bytes);
+
+					/*
+					 * Handling servers that close the data connection -- 24APR02asg
+					 */
+
+					if ((bytes > 0)  &&  ((wrote = write(x->ch.other, buffer, bytes)) == bytes))
 						x->ch.bytes += bytes;
-						}
 					else {
+						if (wrote < 0)
+							syslog(LOG_NOTICE, "error writing data channel, error= %s", strerror(errno));
+
 						if (debug)
 							fprintf (stderr, "closing data connection\n");
 
@@ -477,11 +484,13 @@ char *cfgets(ftp_t *x, char *line, int size)
 
 int cfputs(ftp_t *x, char *line)
 {
+	char	buffer[310];
+
 	if (debug)
 		fprintf (stderr, ">>> CLI: %s\n", line);
-		
-	write(1, line, strlen(line));
-	write(1, "\r\n", 2);
+
+	snprintf (buffer, sizeof(buffer) - 2, "%s\r\n", line);
+	write(1, buffer, strlen(buffer));
 
 	return (0);
 }
@@ -502,6 +511,7 @@ char *sfgets(ftp_t *x, char *line, int size)
 
 int sfputs(ftp_t *x, char *format, ...)
 {
+	int	len;
 	char	buffer[310];
 	va_list	ap;
 
@@ -519,7 +529,17 @@ int sfputs(ftp_t *x, char *format, ...)
 	 */
 
 	strcat(buffer, "\r\n");
-	write(x->fd.server, buffer, strlen(buffer));
+	len = strlen(buffer);
+
+	/*
+	 * SIGPIPE is catched but then ignored, we have to handle it
+	 * one our own now -- 24APR02asg
+	 */
+
+	if (write(x->fd.server, buffer, len) != len) {
+		syslog(LOG_NOTICE, "-ERR: error writing control connect, error= %s", strerror(errno));
+		exit (1);
+		}
 
 /*
  *	write(x->fd.server, buffer, strlen(buffer));
@@ -758,7 +778,7 @@ int dopasv(ftp_t *x, char *command, char *par)
 	if (debug)
 		fprintf (stderr, "listening on %s:%u\n", ch->inside.ipnum, ch->inside.port);
 
-	snprintf (line, sizeof(line) - 2, "227 ok, entering passive mode (%s,%u,%u)",
+	snprintf (line, sizeof(line) - 2, "227 Entering Passive Mode (%s,%u,%u)",
 			ch->inside.ipnum,
 			ch->inside.port >> 8, ch->inside.port & 0xFF);
 	for (p=line; (c = *p) != 0; p++) {
@@ -1367,7 +1387,7 @@ int dologin(ftp_t *x)
 
 
 	sfgets(x, line, sizeof(line));
-	while (line[3] != ' ') {
+	while (line[3] != ' '  &&  line[3] != 0) {
 		if (sfgets(x, line, sizeof(line)) == NULL) {
 			syslog(LOG_NOTICE, "-ERR: lost server while reading client greeting: %s", x->server.name);
 			exit (1);
@@ -1436,6 +1456,17 @@ int dologin(ftp_t *x)
 
 void signal_handler(int sig)
 {
+	/*
+	 * Changed the way we handle broken pipes (broken control or
+	 * data connection).  We ignore it here but write() returns -1
+	 * and errno is set to EPIPE which is checked.
+	 */
+
+	if (sig == SIGPIPE) {
+		signal(SIGPIPE, signal_handler);
+		return;
+		}
+
 	syslog(LOG_NOTICE, "-ERR: received signal #%d", sig);
 	exit (1);
 }

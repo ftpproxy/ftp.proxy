@@ -2,7 +2,30 @@
 ** Notice: Version 1.0.2 - 1.0.6 and 1.0.9 - 1.1.1 were never released
            to the public.
 
-Version 1.1.5 - 04Feb2002asg
+
+Version 1.1.6 - 27FEB2002asg
+- --------------------------
+
+  * Changed getc_fd to handle servers that close the data connection.
+
+  * Changed proxy response on PASV because mozilla does not like it.
+
+  * Added daemon mode. Now you can start ftp.proxy as daemon using '-D'.
+    This is still experimental do not use this on productive environments.
+    The feature will be added official in the next release.
+    Additional parameters are required.
+
+  * Applied patch which fixes problems with multi-line server greetings,
+    as it appears on 'AppleShare IP FTP Server'. Mentioned by Menno Smits. 
+
+  * Changed default log facility to LOG_DAEMON. On Linux, FreeBSD and NetBSD
+    it is still LOG_FTP. 
+
+  * Modified cfputs() to send the line together with the CR/LF in one
+    packet to make broken firewalls happy.
+
+
+Version 1.1.5 - 04FEB2002asg
 - --------------------------
 
   * Changed 'dologin()' so that ftp.proxy now supports server that do not
@@ -34,7 +57,7 @@ Version 1.1.5 - 04Feb2002asg
     Added new parameter to allow this. (ftp.proxy -B)
 
 
-Version 1.1.4 - 21Jan2002asg
+Version 1.1.4 - 21JAN2002asg
 - --------------------------
 
   * Fixed potential problems after immediate initial unseccsesful up/downloads.
@@ -46,10 +69,10 @@ Version 1.1.4 - 21Jan2002asg
     has seen the "150 ..." message.
 
 
-Version 1.1.3 - 06Dec2001asg
+Version 1.1.3 - 06DEC2001asg
 - --------------------------
 
-  * Fixed missing entry in syslog output.  Mentioned by Markus Meitner. 
+  * Fixed missing entry in syslog output. Mentioned by Markus Meitner. 
   
   * Changed array name MAXBSIZE to FTPMAXBSIZE to solve conflict when
     compiling under NetBSD or SUN Solaris.  Mentioned by Denis Ahrens.  

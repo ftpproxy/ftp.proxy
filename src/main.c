@@ -47,16 +47,26 @@
 #include "lib.h"
 
 
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__)
+#define LOGFACILITY	LOG_FTP
+#else
+#define LOGFACILITY	LOG_DAEMON
+#endif
+
+char *version = "ftp.proxy version: 1.1.6";
+
 char	*program =		"";
 char	progname[80] =		"";
-
-static char	*version =	"ftp.proxy version: 1.1.5  asg@ftpproxy.org";
 
 int	debug =			0;
 int	extralog =		0;
 
 int	uid =			-1;
 int	gid =			-2;
+int	bindport =		21;
+int	daemonmode =		0;
+
+extern int acceptloop(int sock);
 
 
 void missing_arg(int c, char *string)
@@ -85,7 +95,7 @@ int main(int argc, char *argv[], char *envp[])
 	config->allow_anyremote = 0;
 	strcpy(config->varname, "PROXY_");
 
-	openlog(program, LOG_PID, LOG_FTP);
+	openlog(program, LOG_PID, LOGFACILITY);
 
 	k = 1;
 	while (k < argc  &&  argv[k][0] == '-'  &&  argv[k][1] != 0) {
@@ -165,10 +175,12 @@ int main(int argc, char *argv[], char *envp[])
 
 				config->bsize = atoi(argv[k++]);
 				}
-			else if (c == 'V'){
- 				printf("%s\n", version);
+			else if (c == 'V') {
+ 				printf("%s asg@ftpproxy.org\n", version);
  				exit (0);
  				}	
+			else if (c == 'D')
+				daemonmode = 1;
 			else {
 				fprintf (stderr, "%s: unknown option: -%c\n", program, c);
 				exit (-1);
@@ -191,6 +203,17 @@ int main(int argc, char *argv[], char *envp[])
 		exit (1);
 		}
 		
+
+	if (daemonmode != 0) {
+		signal(SIGCHLD, SIG_IGN);
+		if (bindport > 0) {
+			int     sock;
+
+			sock = bind_to_port("", bindport);
+			acceptloop(sock);
+			}
+		}	
+
 	proxy_request(config);
 	exit (0);
 }

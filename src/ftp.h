@@ -4,6 +4,7 @@
     File: ftpproxy/ftp.h
 
     Copyright (C) 1999  Wolfgang Zekoll  <wzk@quietsche-entchen.de>
+    Copyright (C) 2000, 2002  Andreas Schoenberg  <asg@ftpproxy.org>
   
     This software is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -21,10 +22,14 @@
 
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #ifndef	_FTP_INCLUDED
 #define	_FTP_INCLUDED
 
+extern char *version;
 
 extern char *program;
 extern char progname[80];
@@ -32,6 +37,7 @@ extern char progname[80];
 extern int debug;
 extern int extralog;
 
+extern int acceptloop(int sock);
 
 #define	FTPMAXBSIZE		4096
 

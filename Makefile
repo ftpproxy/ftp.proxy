@@ -1,6 +1,6 @@
 
-DIR =		ftpproxy-1.1.5
-TAR =		ftpproxy-1.1.5
+DIR =		ftpproxy-1.1.6
+TAR =		ftpproxy-1.1.6
 
 
 TARGETS =	ftp.proxy
@@ -8,6 +8,7 @@ TARGETS =	ftp.proxy
 
 all:	$(TARGETS)
 	cd src; make all 
+
 
 install:	all
 	cd src; strip $(TARGETS)  &&  cp $(TARGETS) /usr/local/sbin
@@ -24,5 +25,5 @@ tar:		clean
 	
 clean:
 	cd src; rm -f *.o cut out $(TARGETS)
-	rm -f $(TAR).tar.gz
+	rm -f $(TAR).tgz
 

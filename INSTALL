@@ -12,7 +12,7 @@ to be completed ...
  2. Installation
 
 	After you sucessfully built and installed the daemon, you add an
-	entry to your system's inentd.conf depending on your needs:
+	entry to your system's inetd.conf depending on your needs:
 
 	-  clientside server selection: 
 
@@ -25,7 +25,27 @@ to be completed ...
 	- only to one particular FTP-Server:
 
 		ftp     stream  tcp     nowait  nobody  /usr/sbin/tcpd  /usr/local/sbin/ftp.proxy my.outside.server 
+	
+	For xinetd this must work (example):
 
+		service ftp
+			{
+			 socket_type = stream
+			 wait        = no
+			 user        = nobody 
+			 server      = /usr/local/sbin/ftp.proxy 
+			 server_args = -e -m
+			}
+		
+
+	If you like to seprate the ftp.proxy log messages from the other stuff,
+	try something like this in your syslog.conf:
+
+	*.*;ftp.none                            -/var/log/messages
+	ftp.*                                   /var/log/ftp
+
+
+	
 
  3. Advanced Features
 

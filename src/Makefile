@@ -1,8 +1,8 @@
 
 CC =		gcc
-CFLAGS =	-O2 -Wall -ggdb
+CFLAGS =	-O2 -Wall -ggdb -pedantic
 
-FTPPROXY =	main.o ftp.o ip-lib.o lib.o
+FTPPROXY =	main.o ftp.o daemon.o ip-lib.o lib.o
 
 TARGETS =	ftp.proxy
 
@@ -10,11 +10,10 @@ TARGETS =	ftp.proxy
 all:		$(TARGETS)
 	-ctags *.[ch]
 
-
 ftp.proxy:	$(FTPPROXY)
 	$(CC) -o $@ $(FTPPROXY)
 
 	
 clean:
-	rm -f *.o cut out $(TARGETS) $(TAR).tar.gz
+	rm -f *.o cut out $(TARGETS) $(TAR).tgz
 
