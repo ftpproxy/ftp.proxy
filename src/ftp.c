@@ -177,6 +177,7 @@ int close_ch(ftp_t *x, dtc_t *ch)
 	ch->osock     = -1;
 	ch->state     = 0;
 	ch->operation = 0;
+	ch->seen150   = 0;
 
 	return (0);
 }
@@ -230,7 +231,7 @@ int getc_fd(ftp_t *x, int fd)
 				exit (-1);
 				}
 			}
-		else if (x->ch.state == PORT_CONNECTED) {
+		else if (x->ch.state == PORT_CONNECTED  &&  x->ch.seen150 == 1) {
 			FD_SET(x->ch.active, &fdset);
 			if (x->ch.active > max)
 				max = x->ch.active;
@@ -372,10 +373,31 @@ int getc_fd(ftp_t *x, int fd)
 						exit (1);
 						}
 
-					FD_ZERO(&fdset);
-					FD_SET(fd, &fdset);
-					FD_SET(x->ch.active, &fdset);
-					max = (fd > x->ch.active)? fd: x->ch.active;
+					if (x->ch.seen150 == 0) {
+
+						/*
+						 * And finally ... another attempt to solve the short
+						 * data transmission timing problem: If we didn't receive
+						 * the 150 response yet from the server we deactivate the
+						 * data channel until we have the 150 -- 030406asg
+						 */
+
+						if (debug >= 2)
+							fprintf (stderr, "150 not seen, deactivating data channel\n");
+
+						FD_ZERO(&fdset);
+						FD_SET(fd, &fdset);
+						max = fd;
+						}
+					else {
+						if (debug >= 2)
+							fprintf (stderr, "150 already seen, activating data channel\n");
+
+						FD_ZERO(&fdset);
+						FD_SET(fd, &fdset);
+						FD_SET(x->ch.active, &fdset);
+						max = (fd > x->ch.active)? fd: x->ch.active;
+						}
 
 					if (debug)
 						fprintf (stderr, "active= %d, other= %d\n", x->ch.active, x->ch.other);
@@ -992,7 +1014,7 @@ int run_trp(ftp_t *x)
 	char	line[300];
 	FILE	*fp;
 	
-	if (*x->config->trp == 0)
+	if (*x->config->dcp == 0)
 		return (0);
 
 	rc = 0;
@@ -1013,7 +1035,7 @@ int run_trp(ftp_t *x)
 		close(pfd[0]);
 		set_variables(x);
 			
-		copy_string(line, x->config->trp, sizeof(line));
+		copy_string(line, x->config->dcp, sizeof(line));
 		argc = split(line, argv, ' ', 30);
 		argv[argc] = NULL;
 		execvp(argv[0], argv);
@@ -1039,10 +1061,25 @@ int run_trp(ftp_t *x)
 				copy_string(x->password, p, sizeof(x->password));
 			else if (strcmp(var, "SERVERPORT") == 0  ||  strcmp(var, "PORT") == 0)
 				x->server.port = atoi(p);
+
+			/*
+			 * Enable the trp to send error messages.
+			 */
+
+			else if (strcmp(var, "-ERR") == 0  ||  strcmp(var, "-ERR:") == 0) {
+				syslog(LOG_NOTICE, "-ERR: %s", skip_ws(p));
+				exit (1);
+				}
 			}
 
 		fclose(fp);
-		if (waitpid(pid, &rc, 0) < 0) {
+
+		/*
+		 * In standalone mode we do not receive the SIGCHLD because
+		 * we set it to SIG_IGN -- 030406asg
+		 */
+
+		if (x->config->standalone == 0  &&  waitpid(pid, &rc, 0) < 0) {
 			syslog(LOG_NOTICE, "-ERR: error while waiting for trp: %s", strerror(errno));
 			exit (1);
 			}
@@ -1339,7 +1376,8 @@ int dologin(ftp_t *x)
 		if (x->config->allow_passwdblanks == 0)
 			p = noctrl(line);
 		else {
-			for (i=strlen(line); i>=0; i--) {
+			p = line;
+			for (i=strlen(line)-1; i>=0; i--) {
 				if ((c = line[i]) != '\n'  &&  c != '\r') {
 					line[i+1] = 0;
 					break;
@@ -1376,7 +1414,29 @@ int dologin(ftp_t *x)
 		}
 
 
-	if (x->config->selectserver == 0) {
+	if (*x->config->dcp != 0) {
+
+		/*
+		 * We are extremly liberate here with server selection
+		 * if we have a dynamic control program, we accept
+		 * anything here -- 030404asg
+		 */
+
+		if ((p = strchr(x->username, '@')) == NULL  &&  (p = strchr(x->username, '%')) == NULL)
+			*x->server.name = 0;
+		else if (x->config->use_last_at == 0) {
+			*p++ = 0;
+			copy_string(x->server.name, p, sizeof(x->server.name));
+			}
+		else {
+			if ((p = strrchr(x->username, '@')) == NULL)
+				p = strrchr(x->username, '%');
+
+			*p++ = 0;
+			copy_string(x->server.name, p, sizeof(x->server.name));
+			}
+		}
+	else if (x->config->selectserver == 0) {
 		if ((p = strchr(x->username, '@')) != NULL  &&  (p = strchr(x->username, '%')) != NULL) {
 			cfputs(x, "500 service unavailable");
 			syslog(LOG_NOTICE, "-ERR: hostname supplied: %s", p);
@@ -1417,41 +1477,32 @@ int dologin(ftp_t *x)
 		 * vorhanden ist.
 		 */
 
-		if ((p = x->config->u.serverlist) != NULL  &&  *p != 0) {
-			int	permitted;
-			char	pattern[80];
-
-			permitted = 0;
-			while ((p = skip_ws(p)), *get_quoted(&p, ',', pattern, sizeof(pattern)) != 0) {
-				noctrl(pattern);
-				if (strpcmp(x->server.name, pattern) == 0) {
-					permitted = 1;
-					break;
-					}
-				}
-
-			if (permitted == 0) {
-				cfputs(x, "500 service unavailable");
-				syslog(LOG_NOTICE, "-ERR: hostname not permitted: %s", x->server.name);
-				exit (1);
-				}
-			}
+/*
+ * Checking the server against the given list is done later now,
+ * see below.  Code quoted -- 030404asg
+ *
+ *		if ((p = x->config->u.serverlist) != NULL  &&  *p != 0) {
+ *			int	permitted;
+ *			char	pattern[80];
+ *
+ *			permitted = 0;
+ *			while ((p = skip_ws(p)), *get_quoted(&p, ',', pattern, sizeof(pattern)) != 0) {
+ *				noctrl(pattern);
+ *				if (strpcmp(x->server.name, pattern) == 0) {
+ *					permitted = 1;
+ *					break;
+ *					}
+ *				}
+ *
+ *			if (permitted == 0) {
+ *				cfputs(x, "500 service unavailable");
+ *				syslog(LOG_NOTICE, "-ERR: hostname not permitted: %s", x->server.name);
+ *				exit (1);
+ *				}
+ *			}
+ */
 		}
 	
-
-	/*
-	 * Port und IP-Nummer des Servers holen.
-	 */
-
-	x->server.port = get_port(x->server.name, 21);
-	if ((hostp = gethostbyname(x->server.name)) == NULL) {
-		cfputs(x, "500 service unavailable");
-		syslog(LOG_NOTICE, "-ERR: can't resolve hostname: %s", x->server.name);
-		exit (1);
-		}
-
-	memcpy(&saddr.sin_addr, hostp->h_addr, hostp->h_length);
-	copy_string(x->server.ipnum, inet_ntoa(saddr.sin_addr), sizeof(x->server.ipnum));
 
 
 	/*
@@ -1470,20 +1521,13 @@ int dologin(ftp_t *x)
 		copy_string(x->password, p, sizeof(x->password));
 		}
 
-	/*
-	 * Access Control Programm starten
-	 */
-
-	if (*x->config->acp != 0) {
-		if (run_acp(x) != 0)
-			exit (0);
-		}
-
         /*
-         * Translation Program aufrufen.
+         * Call the dynamic configuration program.
          */
 
-        if (*x->config->trp != 0) {
+        if (*x->config->dcp != 0) {
+		x->server.port = get_port(x->server.name, 21);
+
                 if (run_trp(x) != 0)
                         exit (0);       /* Never happens, we exit in run_trp() */
 
@@ -1493,6 +1537,68 @@ int dologin(ftp_t *x)
 					x->username, x->password);
 			}
                 }
+
+
+	/*
+	 * Get port an IP number of server.  Moved code here -- 030404asg
+	 */
+
+	x->server.port = get_port(x->server.name, 21);
+	if ((hostp = gethostbyname(x->server.name)) == NULL) {
+		cfputs(x, "500 service unavailable");
+		syslog(LOG_NOTICE, "-ERR: can't resolve hostname: %s", x->server.name);
+		exit (1);
+		}
+
+	memcpy(&saddr.sin_addr, hostp->h_addr, hostp->h_length);
+	copy_string(x->server.ipnum, inet_ntoa(saddr.sin_addr), sizeof(x->server.ipnum));
+
+
+	/*
+	 * Call the access control program to check if the proxy
+	 * request is allowed.  Moved code here -- 030404asg
+	 */
+
+	if (*x->config->acp != 0) {
+		if (run_acp(x) != 0)
+			exit (0);
+		}
+
+
+	/*
+	 * Verification if the destination server is on the given list
+	 * is done now here.
+	 *
+	 * Notice: Prior to this change you could give a fixed desination
+	 * server as command line argument and a list of allowed server
+	 * too.  Meaningless because the proxy didn't care when the `server
+	 * selection' option wasn't turned on.  Now also the fixed server
+	 * is checked against the list.
+	 *
+	 * I don't expect that this breaks an already running configuration
+	 * because as said above this configuration was senseless in earlier
+	 * proxy versions -- 030404asg
+	 */
+
+	if ((p = x->config->u.serverlist) != NULL  &&  *p != 0) {
+		int	permitted;
+		char	pattern[80];
+
+		permitted = 0;
+		while ((p = skip_ws(p)), *get_quoted(&p, ',', pattern, sizeof(pattern)) != 0) {
+			noctrl(pattern);
+			if (strpcmp(x->server.name, pattern) == 0) {
+				permitted = 1;
+				break;
+				}
+			}
+
+		if (permitted == 0) {
+			cfputs(x, "500 service unavailable");
+			syslog(LOG_NOTICE, "-ERR: hostname not permitted: %s", x->server.name);
+			exit (1);
+			}
+		}
 
 
 	/*
@@ -1776,8 +1882,12 @@ int proxy_request(config_t *config)
 		else if (strcmp(command, "LIST") == 0  ||  strcmp(command, "NLST") == 0) {
 			x->ch.operation = OP_GET;	/* fuer PASV mode */
 			rc = sfputc(x, command, parameter, line, sizeof(line), NULL);
-			if (rc == 125  ||  rc == 150)
+			if (rc == 125  ||  rc == 150) {
 				x->ch.operation = OP_GET;
+				x->ch.seen150   = 1;
+				if (debug >= 2)
+					fprintf (stderr, "received 150 response\n");
+				}
 			else
 				close_ch(x, &x->ch);
 
@@ -1787,8 +1897,12 @@ int proxy_request(config_t *config)
 		else if (strcmp(command, "RETR") == 0) {
 			x->ch.operation = OP_GET;	/* fuer PASV mode */
 			rc = sfputc(x, "RETR", parameter, line, sizeof(line), NULL);
-			if (rc == 125  ||  rc == 150)
+			if (rc == 125  ||  rc == 150) {
 				x->ch.operation = OP_GET;
+				x->ch.seen150   = 1;
+				if (debug >= 2)
+					fprintf (stderr, "received 150 response\n");
+				}
 			else
 				close_ch(x, &x->ch);
 
@@ -1804,6 +1918,10 @@ int proxy_request(config_t *config)
 			rc = sfputc(x, command, parameter, line, sizeof(line), NULL);
 			if (rc == 125  ||  rc == 150) {
 				x->ch.operation = OP_PUT;
+				x->ch.seen150   = 1;
+				if (debug >= 2)
+					fprintf (stderr, "received 150 response\n");
+
 				copy_string(x->ch.command, command, sizeof(x->ch.command));
 				}
 			else

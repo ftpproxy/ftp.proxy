@@ -1,5 +1,8 @@
 
-# uncomment following for Solaris compile (need gnu make for top level make file)
+#
+# Uncomment following for Solaris compile (need gnu make for top level
+# make file)
+#
 #OSFLAG = -DSOLARIS
 #OSLIB = -lnsl -lsocket
 

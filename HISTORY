@@ -2,6 +2,63 @@
 ** Notice: Version 1.0.2 - 1.0.6 and 1.0.9 - 1.1.1 were never released
            to the public.
 
+Version 1.2.0 - 11072003asg
+- --------------------------------
+
+  * Looking in this file this numbering scheme displeased me.
+    From now on every beta release get a subnumber and official 
+    releases a major number.
+    So this new relaese will start with 1.2.0
+
+Version 1.1.7.pre3 - 09072003asg
+- --------------------------------
+
+  * Fixed missing line in the do_login function. Could solve unexpected
+    behaviour of ftp.proxy.
+    Mentioned by Michael A. Meiszl and Rasca Gmelch.
+
+Version 1.1.7.pre2 - 06042003asg
+- --------------------------------
+
+  * Another attempt to deal with an old problem: Suppose the client
+    lists an almost empty directory (or does any other small data
+    transmission with the remote server) is might happen that the
+    proxy receives and spools the data before the 150 response is
+    send to the client.  ftp.proxy uses the TCP_NODELAY socket
+    options since version 1.1.4 but what if the server (or upstream
+    proxy) causes the problem?
+
+    The proxy does now track if the 150 response arrived already and
+    the data transmission between client and server is delayed until
+    it has been received.
+ 
+
+Version 1.1.7.pre1 - 04042003asg
+- --------------------------------
+
+  * Introducing `dynamic configuration programs' aka DCP's.  In short
+    a DCP receives username and remote server as supplied by the user
+    and sends the proxy server the real FTP server the proxy should
+    connect to with perhaps different username and password.
+
+    Everything of this is optional.  Furthermore there is yet no
+    documentation because DCPs are work in progress and even the DCP
+    scheme is not fixed yet.  There is however a sample DCP named
+    operator.dcp showing how things basically work.
+
+    DCP's required changes to the source code.  Even if you do not
+    use DCP's the changes may influence the way ftp.proxy is working.
+
+    The DCP's are based on the idea of 'connection translation program'
+    from Damian Ivereigh and replaces this feature introduced in 1.1.6.beta6
+
+Version 1.1.6.beta8 - 25MAR2003asg
+- ----------------------------------
+
+  * Changed -D option: the proxy server port number must now be set
+    with the -D option.
+
+    
 Version 1.1.6.beta7 - 10FEB2003asg
 - ----------------------------------
 
@@ -82,6 +139,7 @@ Version 1.1.5 - 04FEB2002asg
 	server uses eth0 for it's data connection port.  This is clearly
 	the server's fault, but anyway.  ftp.redhat.com was reported to
 	work that way.
+
     Try to avoid using this option, because it can cause security problems.
 
   * Changed log facility to LOG_FTP. (Hope this will work on all systems.) 

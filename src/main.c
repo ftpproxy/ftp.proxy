@@ -162,15 +162,15 @@ int main(int argc, char *argv[], char *envp[])
 				}
                         else if (c == 'x') {
                                 if (k >= argc)
-                                        missing_arg(c, "connection translation program");
+                                        missing_arg(c, "dynamic configuration program");
 
-                                copy_string(config->trp, argv[k++], sizeof(config->trp));
+                                copy_string(config->dcp, argv[k++], sizeof(config->dcp));
                                 }
 			else if (c == 'y') {
 				
 				/*
 				 * To make 'bad multihomed servers' happy and
-				 * to allow server-server transfers trough the
+				 * to allow server-server transfers through the
 				 * proxy -- 31JAN02asg
 				 */
 
@@ -186,8 +186,13 @@ int main(int argc, char *argv[], char *envp[])
  				printf("ftp.proxy version: %s asg@ftpproxy.org\n", VERSION);
  				exit (0);
  				}	
-			else if (c == 'D')
+			else if (c == 'D') {
+				if (k >= argc)
+					missing_arg(c, "port number");
+
+				bindport = strtoul(argv[k++], NULL, 10);
 				daemonmode = 1;
+				}
 			else {
 				fprintf (stderr, "%s: unknown option: -%c\n", program, c);
 				exit (-1);
@@ -197,12 +202,22 @@ int main(int argc, char *argv[], char *envp[])
 
 
 	if (config->selectserver == 0) {
-		if (k >= argc) {
-			fprintf (stderr, "usage: %s [<options>] <server>\n", program);
-			exit (1);
-			}
 
-		copy_string(config->u.server, argv[k++], sizeof(config->u.server));
+		/*
+		 * Fixed proxy server together with DCP doesn't make
+		 * much sense -- 040303asg
+		 */
+
+		if (*config->dcp != 0)
+			syslog(LOG_NOTICE, "FTP server configured with dcp: ignoring server");
+		else {
+			if (k >= argc) {
+				fprintf (stderr, "usage: %s [<options>] <server>\n", program);
+				exit (1);
+				}
+
+			copy_string(config->u.server, argv[k++], sizeof(config->u.server));
+			}
 		}
 	
 	if (k < argc) {
@@ -213,6 +228,7 @@ int main(int argc, char *argv[], char *envp[])
 
 	if (daemonmode != 0) {
 		signal(SIGCHLD, SIG_IGN);
+		config->standalone = 1;
 		if (bindport > 0) {
 			int     sock;
 

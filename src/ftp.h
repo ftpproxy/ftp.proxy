@@ -43,6 +43,7 @@ extern int acceptloop(int sock);
 
 
 typedef struct _config {
+    int		standalone;
     int		timeout;
 
     int		selectserver;
@@ -54,8 +55,8 @@ typedef struct _config {
 	} u;
 
     char	acp[200];
-    char        trp[200];
     char	ccp[200];
+    char	dcp[200];
     char	varname[80];
 
     int		allow_blanks;
@@ -94,6 +95,7 @@ typedef struct _port {
 
 typedef struct _dtc {
     int		state;		/* LISTEN, CONNECTED, CLOSED */
+    int		seen150;
     
     int		isock;
     int		osock;
