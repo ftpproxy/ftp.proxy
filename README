@@ -1,0 +1,8 @@
+
+Version 1.0.1 - 21MAR2000wzk
+- --------------------------
+
+  * Changed FTP session timeout to 15 minutes.
+
+  * Added support for command control programs.
+
