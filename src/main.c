@@ -142,7 +142,7 @@ int main(int argc, char *argv[], char *envp[])
 				if (k >= argc)
 					missing_arg(c, "server list");
 
-				config->u.serverlist = argv[k++];
+				config->serverlist = argv[k++];
 				}
 			else if (c == 't') {
 				if (k >= argc)
@@ -216,7 +216,7 @@ int main(int argc, char *argv[], char *envp[])
 				exit (1);
 				}
 
-			copy_string(config->u.server, argv[k++], sizeof(config->u.server));
+			copy_string(config->server, argv[k++], sizeof(config->server));
 			}
 		}
 	

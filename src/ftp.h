@@ -49,10 +49,8 @@ typedef struct _config {
     int		selectserver;
     int		allow_anyremote;
 
-    union {
-	char	server[200];
-	char	*serverlist;
-	} u;
+    char	server[200];
+    char	*serverlist;
 
     char	acp[200];
     char	ccp[200];

@@ -1443,7 +1443,7 @@ int dologin(ftp_t *x)
 			exit (1);
 			}
 
-		copy_string(x->server.name, x->config->u.server, sizeof(x->server.name));
+		copy_string(x->server.name, x->config->server, sizeof(x->server.name));
 		}
 	else {
 
@@ -1481,7 +1481,7 @@ int dologin(ftp_t *x)
  * Checking the server against the given list is done later now,
  * see below.  Code quoted -- 030404asg
  *
- *		if ((p = x->config->u.serverlist) != NULL  &&  *p != 0) {
+ *		if ((p = x->config->serverlist) != NULL  &&  *p != 0) {
  *			int	permitted;
  *			char	pattern[80];
  *
@@ -1580,7 +1580,7 @@ int dologin(ftp_t *x)
 	 * proxy versions -- 030404asg
 	 */
 
-	if ((p = x->config->u.serverlist) != NULL  &&  *p != 0) {
+	if ((p = x->config->serverlist) != NULL  &&  *p != 0) {
 		int	permitted;
 		char	pattern[80];
 

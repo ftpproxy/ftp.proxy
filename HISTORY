@@ -2,13 +2,19 @@
 ** Notice: Version 1.0.2 - 1.0.6 and 1.0.9 - 1.1.1 were never released
            to the public.
 
+Version 1.2.1 - 19082003asg
+- --------------------------------
+
+  * Fixed a bug in dologin.
+    Now the use of ftp.proxy with a fixed server works again.
+
 Version 1.2.0 - 11072003asg
 - --------------------------------
 
   * Looking in this file this numbering scheme displeased me.
     From now on every beta release get a subnumber and official 
     releases a major number.
-    So this new relaese will start with 1.2.0
+    So this new release will start with 1.2.0
 
 Version 1.1.7.pre3 - 09072003asg
 - --------------------------------
