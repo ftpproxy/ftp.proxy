@@ -1,0 +1,76 @@
+#!/bin/akanga -p
+#
+# ccp.rc - Sample command control program.  No uploads are allowed,
+#          the "STOR" command is denied with a ccp supplied message.
+#
+#	   Update for monitor mode: If ftp.proxy's monitor mode is
+#	   switched on (option -m) disallow file operations under
+#	   /tmp/*.  Notice that however `cd /tmp' is allowed.
+#
+
+
+
+
+
+if (~ $PROXY_FTPPATH /tmp/*) {		# add `/tmp' to disallow also `cd /tmp'
+	echo permission denied >[1=2]
+	echo forbidden by path: $PROXY_COMMAND $PROXY_PARAMETER: $PROXY_FTPPATH
+	}
+
+#
+# This is only for logging purposes.  Keep in mind: ftp.proxy accepts only
+# a single line of output.
+#
+
+echo ccp log: $PROXY_COMMAND $PROXY_FTPPATH '[' ^ $PROXY_PARAMETER ^ ']'
+
+
+
+#
+# Now analyze the command.
+#
+
+if (~ $PROXY_COMMAND STOR) {
+	echo upload not allowed >[1=2]
+	exit 1
+} else if (~ $PROXY_COMMAND APPE STOU) {
+	exit 1
+} else if (~ $PROXY_COMMAND DELE RNFR RNTO MKD RMD SITE) {
+
+	#
+	# This turns the server into read-only.
+	#
+
+	echo permission denied >[1=2]
+	exit 1
+} else if (~ $PROXY_COMMAND +EXIT) {
+	echo $PROXY_CCPCOLL collisions
+	exit 0
+	}
+
+
+if (! ~ $PROXY_FTPHOME '') {
+
+	#
+	# We are in monitor mode.  Let's give our users chrooted environments.
+	# But be careful, this is no real protection against links pointing to
+	# the outside area.  But notice also that a `cd' to the outside is
+	# perhaps possible but the next command is checked with this rule
+	# again.
+	#
+
+	if (! ~ $PROXY_FTPPATH $PROXY_FTPHOME ^ *) {
+
+		#
+		# The user want's to access something outside his chrooted
+		# environment ...
+		#
+
+		echo 553 no access >[1=2]
+		exit 1
+		}
+	}
+
+
+exit 0
+

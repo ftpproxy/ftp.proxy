@@ -27,7 +27,7 @@
 extern char *program;
 
 
-int openip(char *server, unsigned int port);
+int openip(char *server, unsigned int port, char *srcip, unsigned int srcport);
 
 unsigned int getportnum(char *name);
 unsigned int get_port(char *server, unsigned int def_port);

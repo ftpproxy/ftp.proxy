@@ -46,7 +46,8 @@ static void alarm_handler()
 	return;
 }
 
-int openip(char *host, unsigned int port)
+
+int openip(char *host, unsigned int port, char *srcip, unsigned int srcport)
 {
 	int	socketd;
 	struct sockaddr_in server;
@@ -56,6 +57,50 @@ int openip(char *host, unsigned int port)
 	if (socketd < 0)
 		return (-1);
   
+  	/*
+	 * Enhancement to use a particular local interface and source port,
+	 * mentioned by Juergen Ilse, <ilse@asys-h.de>.
+	 */
+
+  	if (srcip != NULL  &&  *srcip != 0) {
+		struct sockaddr_in laddr;
+
+		if (srcport != 0) {
+			int	one;
+
+			one = 1;
+	 		setsockopt (socketd, SOL_SOCKET, SO_REUSEADDR, (int *) &one, sizeof(one));
+			}
+ 
+ 		/*
+         	 * Bind local socket to srcport and srcip
+         	 */
+
+ 		memset(&laddr, 0, sizeof(laddr));
+ 		laddr.sin_family = AF_INET;
+ 		laddr.sin_port   = htons(srcport);
+
+ 		if (srcip == NULL  ||  *srcip == 0)
+ 			srcip = "0.0.0.0";	/* Can't happen but who cares. */
+ 		else {
+ 			struct hostent *ifp;
+ 
+ 			ifp = gethostbyname(srcip);
+ 			if (ifp == NULL) {
+ 				syslog(LOG_NOTICE, "-ERR: can't lookup %s", srcip);
+ 				exit (1);
+ 				}
+ 
+ 			memcpy(&laddr.sin_addr, ifp->h_addr, ifp->h_length);
+ 	 	 	}
+ 
+ 		if (bind(socketd, (struct sockaddr *) &laddr, sizeof(laddr))) {
+ 			syslog(LOG_NOTICE, "-ERR: can't bind to %s:%u", srcip, ntohs(laddr.sin_port));
+ 	    		exit (1);
+ 	  		}
+		}
+
+
 	server.sin_family = AF_INET;
 	hostp = gethostbyname(host);
 	if (hostp == NULL)

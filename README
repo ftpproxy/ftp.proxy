@@ -1,5 +1,67 @@
 
-Version 1.0.1 - 21MAR2000wzk
+** Notice: Version 1.0.2 - 1.0.7 were never released to the public.
+
+
+Version 1.0.7 - 11MAY2001asg
+- --------------------------
+
+  * Several manpage updates.
+
+
+Version 1.0.6 - 20DEC2000asg
+- --------------------------
+
+  * Added support for the SIZE command.
+
+
+Version 1.0.5 - 17DEC2000asg
+- --------------------------
+
+  * Introduced PASV mode.
+
+  * Several minor bug fixes.
+
+
+Version 1.0.4 - 27JUN2000asg
+- --------------------------
+
+  * Fixed bug in readline_fd()/getc_fd(): Some FTP servers send two
+    response lines in a single TCP/IP packet.  The second line was
+    not recognized by ftp.proxy before.
+
+  * Added -b switch to allow blanks in filenames (still not allowed
+    at the beginning or end) on customer request.
+
+
+Version 1.0.3 - 18MAY2000asg
+- --------------------------
+
+  * Added -p option to specify the data source port ftp.proxy uses
+    to connect to the client.  It's possible to tell ftp.proxy to
+    use the FTP standard data port 20 but this requires root perms
+    for the proxy.  Mentioned by Juergen Ilse via Wolfgang Zekoll.
+
+
+Version 1.0.2 - 23SEP1999wzk
+- --------------------------
+
+  * Look into sample-ccp for a command control and applied monitoring
+    example.
+
+  * Added `-b' option to allow blanks in FTP command parameters.
+
+  * Added the monitor mode.  This is experimental.
+
+  * Fixed a bug in the command lookup: an unknown command resulted in
+    a sigsegv.
+
+  * The ccp's output goes now to syslog while and it's stderr is sent to
+    the client.
+
+  * Fixed a file descriptor bug inside the acp and ccp handling code.
+
+
+Version 1.0.1 - 27AUG1999wzk
 - --------------------------
 
   * Changed FTP session timeout to 15 minutes.

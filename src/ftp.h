@@ -33,6 +33,9 @@ extern int debug;
 extern int extralog;
 
 
+#define	MAXBSIZE		4096
+
+
 typedef struct _config {
     int		timeout;
 
@@ -45,7 +48,17 @@ typedef struct _config {
     char	acp[200];
     char	ccp[200];
     char	varname[80];
+
+    int		allow_blanks;
+    int		monitor;
+    int		bsize;
+
+    int		numeric_only;
+    unsigned int dataport;
     } config_t;
+
+
+#define	DIR_MAXDEPTH		15
 
 
 #define	CCP_OK			0
@@ -89,6 +102,13 @@ typedef struct _dtc {
     unsigned long bytes;
     } dtc_t;
 
+
+typedef struct _bio {
+    int		here, len;
+    char	buffer[512];
+    } bio_t;
+
+
 typedef struct _ftp {
     config_t	*config;
     
@@ -113,12 +133,6 @@ typedef struct _ftp {
 	char	ipnum[80];
 	} server;
 
-/*    int		timeout;
- *
- *   char	acp[200];
- *   char	varname[80];
- */
-
     struct {
 	int		server;		/* Kontrollverbindung zum Server */
 
@@ -130,17 +144,16 @@ typedef struct _ftp {
 	} fd;
 
     dtc_t		ch;
+    char		cwd[200];
+    char		home[200];
+    char		filepath[200];
 
-    struct {
-	int		lastfd;
-	int		here, len;
-	char		buffer[4096];
-	} bio;
-
-    char	session[80];
-    int		ccpcoll;
+    bio_t		cbuf, sbuf;
     
-    int		commands;
+    char		session[80];
+    int			ccpcoll;
+    
+    int			commands;
     unsigned long datain, dataout;
     } ftp_t;
 

@@ -3,7 +3,8 @@
 
     File: ftpproxy/main.c
 
-    Copyright (C) 1999  Wolfgang Zekoll  <wzk@quietsche-entchen.de>
+    Copyright (C) 1999, 2000  Wolfgang Zekoll  <wzk@quietsche-entchen.de>
+    Copyright (C) 2000, 2001  Andreas Schoenberg  <asg@compucation.de>
   
     This software is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -94,6 +95,8 @@ int main(int argc, char *argv[], char *envp[])
 
 				copy_string(config->acp, argv[k++], sizeof(config->acp));
 				}
+			else if (c == 'b')
+				config->allow_blanks = 1;
 			else if (c == 'c') {
 				if (k >= argc)
 					missing_arg(c, "command control program");
@@ -104,6 +107,18 @@ int main(int argc, char *argv[], char *envp[])
 				config->selectserver = 1;
 			else if (c == 'l')
 				extralog = 1;
+			else if (c == 'm')
+				config->monitor = 1;
+			else if (c == 'n')
+				config->numeric_only = 1;
+			else if (c == 'p') {
+				if (k >= argc)
+					missing_arg(c, "data port");
+
+				config->dataport = strtoul(argv[k++], NULL, 10);
+				if (config->dataport == 0)
+					config->dataport = 20;
+				}
 			else if (c == 's') {
 				if (k >= argc)
 					missing_arg(c, "server list");
@@ -127,6 +142,12 @@ int main(int argc, char *argv[], char *envp[])
 /*			else if (c == 'y')
  *				x->cleanenv = 1;
  */
+ 			else if (c == 'z') {
+				if (k >= argc)
+					missing_arg(c, "buffer size");
+
+				config->bsize = atoi(argv[k++]);
+				}
 			else {
 				fprintf (stderr, "%s: unknown option: -%c\n", program, c);
 				exit (-1);

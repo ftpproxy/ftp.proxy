@@ -1,12 +1,14 @@
 
 Begin3
 Title:			ftpproxy
-Version:		1.0.1
-Entered-date:		21 MARCH 2000
-Description:		FTP proxy.
+Version:		1.0.7
+Entered-date:		11 MAY 2001
+Description:		FTP proxy with optional access and command control
+			and client monitoring.
 Keywords:		FTP, proxy, firewall
 Author:			wzk@quietsche-entchen.de (Wolfgang Zekoll)
-Maintained-by:		wzk@quietsche-entchen.de (Wolfgang Zekoll)
+			asg@compucation.de (Andreas Schoenberg)
+Maintained-by:		asg@compucation.de (Andreas Schoenberg)
 Primary-site:
 Alternate-site:
 Original-site:

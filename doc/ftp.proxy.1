@@ -33,12 +33,41 @@ must be started from a TCP superserver like
 or
 .IR tcpproxy (1).
 It can't bind to a TCP/IP port on it's own.
+.SS "Protocol Support"
+.I ftp.proxy
+supports the following FTP commands:
+.PP
+.RS
+ABOR, ACCT, APPE, CDUP, CWD, DELE, LIST, MKD,
+.br
+MODE, NLIST, NOOP, PASS, PASV, PORT, PWD, QUIT,
+.br
+RETR, REST, RNFR, RNTO, RMD, SITE, SIZE, SMNT,
+.br
+STAT, STOR, SYST, TYPE, USER
+.br
+.PP
+.RE
+Transfer of structured data is not
+supported.
+.SS "Command Parameters"
+By default \fIftp.proxy\fR does not accept blanks in command parameters.
+This is to protect your UNIX server against users who work on computers where
+these things are usual.
+.PP
+To allow blanks the option \fB-b\fR must be given on the commans line.
+Notice that blanks at the beginning or end of the parameter are still
+not supported.
+.PP
+The `SITE' is in neither case affected by this limitation, \fIftp.proxy\fR
+accepts always blanks in `SITE' parameters.
 .SS "Server Selection"
-If client-side server selection it turned on
+If client-side server selection it turned on with the \fB-e\fR option
 the user must select the FTP server he wants to use with
 the `@' notation.
-Instead of specifying the real ftp server the user connects to
-the gateway machine where \fIftp.proxy\fR is running and enters the username
+Instead of specifying the real ftp server on the command line the user
+has to connect to
+the gateway machine where \fIftp.proxy\fR is running and to enter the username
 in the form
 .EX \fIremote-user\fR@\fIremote-ftp.server\fR
 The password that is send to the proxy server is the password required
@@ -46,25 +75,8 @@ for logging into \fIremote-ftp-server\fR with the account \fIremote-user\fR.
 .PP
 In situations where the FTP client doesn't support usernames containing
 an `@' the percent sign `%' might be used for that.
-.SS "Protocol Support"
-.I ftp.proxy
-supports the following POP3 commands:
-.PP
-.RS
-ABOR, ACCT, APPE, CDUP, CWD, DELE, LIST, NLIST,
-.br
-NOOP, MKD, MODE, PASS, PORT, PWD, QUIT, RETR,
-.br
-REST, RNFR, RNTO, RMD, SITE, SMNT, STAT, STOR,
-.br
-SYST, TYPE, USER
-.br
-.PP
-.RE
-Especially passive transfer mode and transfer of structured data is not
-supported.
 .SS "Access Control"
-If a access control program is given with the \fB-a\fR option on the command
+If an access control program is given with the \fB-a\fR option on the command
 line the connection data is passed to the acp before the server is contacted.
 The acp should return 0 as exit code to grant access and another value to
 deny.
@@ -95,11 +107,19 @@ Furthermore the acp's stdout is connected to the FTP client and
 it's stderr is read by \fIftp.proxy\fR which writes the acp's stderr output
 to syslog.
 .SS "Command Control"
-If a command control program is given with the \fB-c\fR option each
-command entered (the only exception is `PORT') by the client is handed to it.
+If a command control program (ccp) is given with the \fB-c\fR option this
+program is called for the FTP commands
+.PP
+.RS
+APPE, CDUP, CWD, DELE, LIST, MKD, NLST,
+.br
+RETR, RNFR, RNTO, RMD, STAT, STOR, STOU
+.br
+.PP
+.RE
 The ccp returns an exit code of 0 to grant and any other to deny access (the
 exit code to the `QUIT' command is ignored).
-For this the same variables as for acp's are set with the addition
+For the ccp the same variables as for acp's are set with the addition
 of
 .TP
 \fBPROXY_COMMAND\fR, \fBPROXY_PARAMETER\fR
@@ -112,21 +132,61 @@ a unique identifier for the proxy session.
 the client's number of collisions with the ccp's permission rules (number
 of `permission denied' responses).
 .PP
-The ccp's stdout and stderr are connected to \fIftp.proxy\fR and a one line
-message written by the ccp goes to syslog.
-In case that the access is denied the client receives a 553 return code
-from \fIftp.proxy\fR.
+The ccp's stdout and stderr are connected to \fIftp.proxy\fR.
+A one line message written to stdout by the ccp goes to syslog, while
+a message one stderr is sent to the client.
+If this message does not contain a status \fIftp.proxy\fR substitutes a
+`553' code.
+If the message is empty the client gets a simle `553 permission denied'.
+Notice that the stderr message is only used if the ccp returns an exit code
+other the zero.
 .PP
 On normal program termination (`QUIT' command or timeout) the ccp is called
 with the command `+EXIT' to do some final clean up.
-Notice that abnormal terminations (most signals program errors) should be
-preceded with a `-ERR' line in the syslog.
+It is not reliable that the ccp receives the `+EXIT' event.
+There are lots of possiblities that the proxy terminates without generating
+it, e.g. client timeout, server error or signal reciption by the proxy.
+.SS "Monitor Mode"
+The \fB-m\fR option puts \fIftp.proxy\fR into the monitor mode.
+\fIftp.proxy\fR will then try to keep track of the client's current directory
+on the server side.
+With this information the file parameter for the commands
+.PP
+.RS
+APPE, CDUP, CWD, DELE, LIST, MKD, NLST,
+.br
+RETR, RNFR, RNTO, RMD, STOR
+.br
+.PP
+.RE
+is converted into an absolute path.
+This value is then used in syslog messages and given to a ccp in the
+\fBPROXY_FTPPATH\fR variable.
+Furthermore the variable \fBPROXY_FTPHOME\fR contains the user's initial
+directory which is assumed to be his home directory.
+.PP
+The `LIST' and `NLIST' command may have a parameter or not.
+If it is absent \fiftp.proxy\fR sets the parameter to `*' but this
+affects only the \fBPROXY_FTPPATH\fR variable, not the command that is sent
+to the server.
+.PP
+For the `CDUP' command \fBPROXY_FTPPATH\fR contains the full path of the
+target directory.
+.PP
+Monitoring may not work with all server systems since the output of the
+`PWD' command which is used by \fIftp.proxy\fR to get the current directory
+in not completely defined.
+If the directory can not be clearly determined \fIftp.proxy\fR will
+terminate.
 .SH OPTIONS
 The following options are available:
 .TP
 \fB-a\fR \fIacp\fR
 specify an access control program that grants or denies access via
 \fIftp.proxy\fR.
+.TP
+\fB-b\fR
+allows blanks in filenames.
 .TP
 \fB-c\fR \fIccp\fR
 set a command control program that grants or denies the usage of FTP
@@ -141,7 +201,15 @@ enable client-side server selection.
 With this option the \fIserver\fR argument isn't accepted.
 .TP
 \fB-l\fR
-set logging of most of the FTP commands.
+sets logging of most of the FTP commands.
+.TP
+\fB-m\fR
+sets the monitor mode.
+.TP
+\fB-p\fR \fIport\fR
+tell \fIftp.proxy\fR to use \fIport\fR as source port for data
+transfers (using port number 20 is FTP standard).
+Keep in mind that port numbers below 1024 require root permissions.
 .TP
 \fB-s\fR \fIlist\fR
 the FTP server selected by the client must match one of the pattern
