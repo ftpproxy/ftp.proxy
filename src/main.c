@@ -153,6 +153,8 @@ int main(int argc, char *argv[], char *envp[])
 				if (config->timeout < 1)
 					config->timeout = 60;
 				}
+			else if (c == 'u')
+				config->use_last_at = 1;
 			else if (c == 'v') {
 				if (k >= argc)
 					missing_arg(c, "varname prefix");

@@ -1292,16 +1292,26 @@ int dologin(ftp_t *x)
 	else {
 
 		/*
-		 * Es wird das erste Vorkommen des @-Zeichens gesucht, nicht das
-		 * letzte, da sonst Proxy-Routing durch den Client ermoeglicht
-		 * wird.
+		 * Normally we search for the first '@' so that the client can 
+		 * not use "proxy hopping". The option "-u" can override
+		 * this behaviour.
 		 */
 
-		if ((p = strchr(x->username, '@')) == NULL  &&  (p = strchr(x->username, '%')) == NULL) {
-			cfputs(x, "500 service unavailable");
-			syslog(LOG_NOTICE, "-ERR: missing hostname");
-			exit (1);
+		if (x->config->use_last_at == 0) {
+			if ((p = strchr(x->username, '@')) == NULL  &&  (p = strchr(x->username, '%')) == NULL) {
+				cfputs(x, "500 service unavailable");
+				syslog(LOG_NOTICE, "-ERR: missing hostname");
+				exit (1);
+				}
 			}
+		else {
+			if ((p = strrchr(x->username, '@')) == NULL  &&  (p = strrchr(x->username, '%')) == NULL) {
+				cfputs(x, "500 service unavailable");
+				syslog(LOG_NOTICE, "-ERR: missing hostname");
+				exit (1);
+				}
+			}
+
 
 		*p++ = 0;
 		copy_string(x->server.name, p, sizeof(x->server.name));

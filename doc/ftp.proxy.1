@@ -13,7 +13,7 @@
 .in -0.5i
 .sp
 ..
-.TH FTP.PROXY 1 "04 FEBRUARY 2002"
+.TH FTP.PROXY 1 "10 DECEMBER 2002"
 .SH NAME
 ftp.proxy \- FTP proxy server
 .SH SYNOPSIS
@@ -232,6 +232,11 @@ The wildcards `*' and `?' can be used.
 \fB-t\fR \fItimeout\fR
 specify a different FTP timeout in seconds than the default of 900 (15 minutes).
 .TP
+\fB-u\fR
+search for the last appearance of an '@' in the username. This allows the
+use of usernames with a '@' in it. Be careful with this option, this can be
+abused to do 'proxy hopping'!
+.TP
 \fB-v\fR \fIprefix\fR
 set \fIprefix\fR as variable prefix for the variable passwd to the access
 and command control program.
@@ -250,7 +255,8 @@ Playing around with larger values than the default may increase the
 proxy's data troughput.
 .PP
 .SH "SYSLOG"
-\fIftp.proxy\fR reports to FTP log facility.
+\fIftp.proxy\fR reports to FTP log facility on linux and BSD systems and
+Daemon log facility on other.
 .SH "AUTHOR"
 Andreas Schoenberg <asg@ftpproxy.org>
 .SH "SEE ALSO"

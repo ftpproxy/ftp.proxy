@@ -3,9 +3,12 @@
            to the public.
 
 
-Version 1.1.6 - 28NOV2002asg
+Version 1.1.6 - 28DEC2002asg
 - --------------------------
 
+  * Added new command line option '-u' to allow usernames with a '@'
+    in it. Mentioned by Paul Dragicevich.
+    
   * Changed GPL to current version.
 
   * Changed getc_fd to handle servers that close the data connection.
@@ -40,7 +43,7 @@ Version 1.1.5 - 04FEB2002asg
   * Disabled the modification in  request handling made in 1.1.4 for
     non-linux systems.  
 
-  * Added `-y' to allow any data ports on any remote interfaces.  Use this
+  * Added '-y' to allow any data ports on any remote interfaces.  Use this
     option the following case:
 
 	The proxy connects to an FTP server which runs on a network card

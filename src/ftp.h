@@ -59,6 +59,7 @@ typedef struct _config {
 
     int		allow_blanks;
     int		allow_passwdblanks;
+    int		use_last_at;
     int		monitor;
     int		bsize;
 
