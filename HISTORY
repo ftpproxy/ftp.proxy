@@ -5,6 +5,8 @@
 Version 1.2.3
 - --------------------------------
 
+  * Fixed bug in waitpid handling in daemon mode.
+
   * Added optional xferlog logging.
   
   * Added -q option to set the source IP of the outgoing control
