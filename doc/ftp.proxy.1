@@ -1,0 +1,130 @@
+.de ES
+.sp
+.in +0.5i
+..
+.de EE
+.in -0.5i
+.sp
+..
+.de EX
+.sp
+.in +0.5i
+\\$1
+.in -0.5i
+.sp
+..
+.TH FTP.PROXY 1 "26 OCTOBER 1999"
+.SH NAME
+ftp.proxy \- FTP proxy server
+.SH SYNOPSIS
+\fBftp.proxy\fR [\fIoptions\fR] [\fIserver\fR]
+.SH DESCRIPTION
+.I ftp.proxy
+is a proxy server for a subset of the file tranfer protocol described in
+RFC 959.
+It forwards traffic between a client and a \fIserver\fR without looking too much
+if both host do real FTP.
+The FTP server can be either given on the command line or supplied by the
+client.
+.PP
+.I ftp.proxy
+must be started from a TCP superserver like
+.IR inetd (1)
+or
+.IR tcpproxy (1).
+It can't bind to a TCP/IP port on it's own.
+.SS "Server Selection"
+If client-side server selection it turned on
+the user must select the FTP server he wants to use with
+the `@' notation.
+Instead of specifying the real ftp server the user connects to
+the gateway machine where \fIftp.proxy\fR is running and enters the username
+in the form
+.EX \fIremote-user\fR@\fIremote-ftp.server\fR
+The password that is send to the proxy server is the password required
+for logging into \fIremote-ftp-server\fR with the account \fIremote-user\fR.
+.PP
+In situations where the FTP client doesn't support usernames containing
+an `@' the percent sign `%' might be used for that.
+.SS "Protocol Support"
+.I ftp.proxy
+supports the following POP3 commands:
+.PP
+.RS
+ABOR, ACCT, APPE, CDUP, CWD, DELE, LIST, NLIST,
+.br
+NOOP, MKD, MODE, PASS, PORT, PWD, QUIT, RETR,
+.br
+REST, RNFR, RNTO, RMD, SITE, SMNT, STAT, STOR,
+.br
+SYST, TYPE, USER
+.br
+.PP
+.RE
+Especially passive transfer mode and transfer of structured data is not
+supported.
+.SS "Access Control"
+If a access control program is given with the \fB-a\fR option on the command
+line the connection data is passed to the acp before the server is contacted.
+The acp should return 0 as exit code to grant access and another value to
+deny.
+.PP
+The access controller receives the following variables:
+.TP
+\fBPROXY_INTERFACE\fR, \fBPROXY_PORT\fR
+interface and port where the client is connected to the proxy.
+.TP
+\fBPROXY_CLIENT\fR, \fBPROXY_CLIENTNAME\fR
+IP number an name of the connected client.
+.TP
+\fBPROXY_SERVER\fR, \fBPROXY_SERVERPORT\fR, \fBPROXY_SERVERNAME\fR
+IP number, port and name of the FTP server the client wants to contact.
+.TP
+\fBPROXY_SERVERLOGIN\fR
+the supplied username for the FTP server.
+.TP
+\fBPROXY_USERNAME\fR, \fBPROXY_PASSWD\fR
+supplied username and password for usage of the proxy server.
+.PP
+The values for \fBPROXY_USERNAME\fR and \fBPROXY_PASSWD\fR are taken from
+the supplied remote username and password if they contain a colon `:'.
+In this case the local authentication data is taken from the left side of
+the colon and the remaining right side is passed on to the server.
+.PP
+Furthermore the acp's stdout is connected to the FTP client and
+it's stderr is read by \fIftp.proxy\fR which writes the acp's stderr output
+to syslog.
+.SH OPTIONS
+The following options are available:
+.TP
+\fB-a\fR \fIacp\fR
+specify an access control program that grants or denies access via
+\fIftp.proxy\fR.
+.TP
+\fB-d\fR
+enter debug mode, the communication between server and client is written
+to stderr.
+.TP
+\fB-e\fR
+enable client-side server selection.
+With this option the \fIserver\fR argument isn't accepted.
+.TP
+\fB-l\fR
+set logging of most of the FTP commands.
+.TP
+\fB-s\fR \fIlist\fR
+the FTP server selected by the client must match one of the pattern
+from the comma separated \fIlist\fR.
+The wildcards `*' and `?' can be used.
+.TP
+\fB-t\fR \fItimeout\fR
+specify a different FTP timeout in seconds than the default of 300 (5 minutes).
+.TP
+\fB-v\fR \fIprefix\fR
+set \fIprefix\fR as variable prefix for the variable passwd to the access
+control program.
+.PP
+.SH "SEE ALSO"
+.IR inetd (1),
+.IR tcpproxy (1).
+

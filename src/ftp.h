@@ -1,0 +1,145 @@
+
+/*
+
+    File: ftpproxy/ftp.h
+    Version: Version 1.1
+
+    Copyright (C) 1999  Wolfgang Zekoll  <wzk@quietsche-entchen.de>
+  
+    This software is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+  
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+  
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+ */
+
+
+#ifndef	_FTP_INCLUDED
+#define	_FTP_INCLUDED
+
+
+extern char *program;
+extern char progname[80];
+
+extern int debug;
+extern int extralog;
+
+
+typedef struct _config {
+    int		timeout;
+
+    int		selectserver;
+    union {
+	char	server[200];
+	char	*serverlist;
+	} u;
+
+    char	acp[200];
+    char	varname[80];
+    } config_t;
+
+
+#define	PORT_LISTEN		1
+#define	PORT_CONNECTED		2
+#define	PORT_CLOSED		3
+
+#define	MODE_PORT		1
+#define	MODE_PASSIVE		2
+
+#define	OP_GET			1
+#define	OP_PUT			2
+
+
+typedef struct _port {
+    char	ipnum[80];
+    unsigned int port;
+    } port_t;
+
+typedef struct _dtc {
+    int		state;		/* LISTEN, CONNECTED, CLOSED */
+    
+    int		isock;
+    int		osock;
+    
+    int		operation;	/* GET oder PUT */
+    int		active;
+    int		other;
+    
+    int		mode;		/* PORT oder PASV */
+    port_t	server;
+    port_t	outside;
+    port_t	inside;
+    port_t	client;
+
+    char	command[20];	/* Fuer syslog Meldungen */
+    char	filename[200];
+    unsigned long bytes;
+    } dtc_t;
+
+typedef struct _ftp {
+    config_t	*config;
+    
+    char	interface[80];
+    unsigned int port;
+
+    char	client[200];
+    char	client_ip[80];
+
+    char	username[200];
+    char	password[200];
+
+    struct {
+	char	username[80];
+	char	password[80];
+	} local;
+
+    struct {
+	char	name[80];
+	unsigned int port;
+
+	char	ipnum[80];
+	} server;
+
+/*    int		timeout;
+ *
+ *   char	acp[200];
+ *   char	varname[80];
+ */
+
+    struct {
+	int		server;		/* Kontrollverbindung zum Server */
+
+	int		cfd;		/* Datenverbindung zum Client */
+	int		sfd;		/* Datenverbindung zum Server */
+
+	fd_set		fdset;
+	int		max;
+	} fd;
+
+    dtc_t		ch;
+
+    struct {
+	int		lastfd;
+	int		here, len;
+	char		buffer[4096];
+	} bio;
+
+
+    int		commands;
+    unsigned long datain, dataout;
+    } ftp_t;
+
+
+extern int proxy_request(config_t *config);
+
+#endif
+
