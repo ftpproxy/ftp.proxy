@@ -13,7 +13,7 @@
 .in -0.5i
 .sp
 ..
-.TH FTP.PROXY 1 "13 NOVEMBER 2001"
+.TH FTP.PROXY 1 "04 FEBRUARY 2002"
 .SH NAME
 ftp.proxy \- FTP proxy server
 .SH SYNOPSIS
@@ -38,15 +38,15 @@ It can't bind to a TCP/IP port on it's own.
 supports the following FTP commands:
 .PP
 .RS
-ABOR, ACCT, APPE, CDUP, CWD, DELE, LIST, MDTM,
+ABOR, ACCT, APPE, CDUP, CWD, DELE, FEAT, LIST,
 .br
-MKD, MODE, NLIST, NOOP, PASS, PASV, PORT, PWD,
+MDTM, MKD, MODE, NLIST, NOOP, PASS, PASV, PORT,
 .br
-QUIT, RETR, REST, RNFR, RNTO, RMD, SITE, SIZE,
+PWD, QUIT, RETR, REST, RNFR, RNTO, RMD, SITE,
 .br
-SMNT, STAT, STOR, SYST, TYPE, USER, XCUP, XCWD,
+SIZE, SMNT, STAT, STOR, SYST, TYPE, USER, XCUP,
 .br
-XMKD, XPWD, XRMD
+XCWD, XMKD, XPWD, XRMD
 .br
 .PP
 .RE
@@ -63,6 +63,10 @@ not supported.
 .PP
 The `SITE' is in neither case affected by this limitation, \fIftp.proxy\fR
 accepts always blanks in `SITE' parameters.
+.PP
+The option -y enables \fIftp.proxy\fR to accept data connections from different
+remote interfaces. Try to avoid using this option, because it can cause
+security problems. (see HISTORY for details) 
 .SS "Server Selection"
 If client-side server selection it turned on with the \fB-e\fR option
 the user must select the FTP server he wants to use with
@@ -194,6 +198,9 @@ specify an access control program that grants or denies access via
 \fB-b\fR
 allows blanks in filenames.
 .TP
+\fB-B\fR
+allows blanks and other special charackters in passwords. 
+.TP
 \fB-c\fR \fIccp\fR
 set a command control program that grants or denies the usage of FTP
 commands through \fIftp.proxy\fR.
@@ -229,17 +236,26 @@ specify a different FTP timeout in seconds than the default of 900 (15 minutes).
 set \fIprefix\fR as variable prefix for the variable passwd to the access
 and command control program.
 .TP
+\fB-V\fR
+show version number
+.TP
+\fB-y\fR
+allow any data ports on any remote interfaces (dangerous!).
+.TP
 \fb-z\fR \fIsize\fR
 sets the amount of data in bytes ftp.proxy tries to read with one system call
 from either the client or the server.
 The default is 1024 bytes, valid values range from 1 to 4096.
 Playing around with larger values than the default may increase the
 proxy's data troughput.
-.TP
-\fB-V\fR
-show version number
 .PP
+.SH "SYSLOG"
+\fIftp.proxy\fR reports to FTP log facility.
+.SH "AUTHOR"
+Andreas Schoenberg <asg@ftpproxy.org>
 .SH "SEE ALSO"
 .IR inetd (1),
 .IR tcpproxy (1).
+.IR syslogd (8).
+.IR syslog.conf (5).
 

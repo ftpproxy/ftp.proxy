@@ -1,6 +1,6 @@
 
-DIR =		ftpproxy-1.1.4
-TAR =		ftpproxy-1.1.4
+DIR =		ftpproxy-1.1.5
+TAR =		ftpproxy-1.1.5
 
 
 TARGETS =	ftp.proxy
@@ -19,8 +19,8 @@ ftp.proxy:
 
 
 tar:		clean
-	cd ..; tar cvf $(TAR).tar $(DIR); gzip $(TAR).tar
-	mv ../$(TAR).tar.gz .
+	cd ..; tar cvzf $(TAR).tgz $(DIR)
+	mv ../$(TAR).tgz .
 	
 clean:
 	cd src; rm -f *.o cut out $(TARGETS)

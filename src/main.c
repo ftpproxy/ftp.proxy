@@ -4,7 +4,7 @@
     File: ftpproxy/main.c
 
     Copyright (C) 1999, 2000  Wolfgang Zekoll  <wzk@quietsche-entchen.de>
-    Copyright (C) 2000, 2001  Andreas Schoenberg  <asg@ftpproxy.org>
+    Copyright (C) 2000, 2002  Andreas Schoenberg  <asg@ftpproxy.org>
   
     This software is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -50,7 +50,7 @@
 char	*program =		"";
 char	progname[80] =		"";
 
-static char	*version =	"ftp.proxy version: 1.1.4  asg@ftpproxy.org";
+static char	*version =	"ftp.proxy version: 1.1.5  asg@ftpproxy.org";
 
 int	debug =			0;
 int	extralog =		0;
@@ -81,9 +81,11 @@ int main(int argc, char *argv[], char *envp[])
 
 	config = allocate(sizeof(config_t));
 	config->timeout = 15 * 60;
+        config->allow_passwdblanks = 0;
+	config->allow_anyremote = 0;
 	strcpy(config->varname, "PROXY_");
 
-	openlog(program, LOG_PID, LOG_MAIL);
+	openlog(program, LOG_PID, LOG_FTP);
 
 	k = 1;
 	while (k < argc  &&  argv[k][0] == '-'  &&  argv[k][1] != 0) {
@@ -101,6 +103,8 @@ int main(int argc, char *argv[], char *envp[])
 
 				copy_string(config->acp, argv[k++], sizeof(config->acp));
 				}
+			else if (c == 'B')
+				config->allow_passwdblanks = 1;
 			else if (c == 'b')
 				config->allow_blanks = 1;
 			else if (c == 'c') {
@@ -145,9 +149,16 @@ int main(int argc, char *argv[], char *envp[])
 
 				copy_string(config->varname, argv[k++], sizeof(config->varname));
 				}
-/*			else if (c == 'y')
- *				x->cleanenv = 1;
- */
+			else if (c == 'y') {
+				
+				/*
+				 * To make 'bad multihomed servers' happy and
+				 * to allow server-server transfers trough the
+				 * proxy -- 31JAN02asg
+				 */
+
+				config->allow_anyremote = 1;
+				}
  			else if (c == 'z') {
 				if (k >= argc)
 					missing_arg(c, "buffer size");

@@ -108,6 +108,7 @@ ftpcmd_t cmdtab[] = {
     { "STOU", 0, 0, 1,	0, 0 },
     { "APPE", 1, 1, 1,	0, 0 },
     { "HELP", 0, 0, 0,	0, 0 },
+    { "FEAT", 0, 0, 0,	0, 0 },
     { "",     0, 0, 0,	0, 0 }
     };
 
@@ -298,14 +299,22 @@ int getc_fd(ftp_t *x, int fd)
 
 						if (x->ch.mode == MODE_PORT) {
 							if (strcmp(x->server.ipnum, remote) != 0) {
-								syslog(LOG_NOTICE, "-ERR: unexpected connect: %s, expected= %s", remote, x->server.ipnum);
-								exit (1);
+								if (x->config->allow_anyremote != 0)
+									/* configuration tells us not to care -- 31JAN02asg */ ;
+								else {
+									syslog(LOG_NOTICE, "-ERR: unexpected connect: %s, expected= %s", remote, x->server.ipnum);
+									exit (1);
+									}
 								}
 							}
 						else {
 							if (strcmp(x->client_ip, remote) != 0) {
-								syslog(LOG_NOTICE, "-ERR: unexpected connect: %s, expected= %s", remote, x->client_ip);
-								exit (1);
+								if (x->config->allow_anyremote != 0)
+									/* ok -- 31JAN02asg */ ;
+								else {
+									syslog(LOG_NOTICE, "-ERR: unexpected connect: %s, expected= %s", remote, x->client_ip);
+									exit (1);
+									}
 								}
 							}
 						}
@@ -530,7 +539,7 @@ int sfputc(ftp_t *x, char *command, char *parameter, char *line, int size, char 
 		else
 			copy_string(buffer, command, sizeof(buffer));
 
-		sfputs(x, buffer);
+		sfputs(x, "%s", buffer);
 		}
 	
 	if (sfgets(x, line, size) == NULL) {
@@ -768,6 +777,72 @@ int dopasv(ftp_t *x, char *command, char *par)
 	return (rc);
 }
 
+
+int dofeat(ftp_t *x)
+{
+	/*
+	 * Not so easy because we have to align with the server response. 
+	 */
+
+	int	rc;
+	char	*p, word[80], serverfeature[80], line[300];
+	static char *proxyfeatlist = "SIZE:MDTM";
+
+	sfputs(x, "%s", "FEAT");
+	if (sfgets(x, line, sizeof(line)) == NULL) {
+		syslog(LOG_NOTICE, "monitor: server not responding");
+		exit (1);
+		}
+
+	rc = atoi(line);
+	if (rc != 211) {
+		/* kein FEAT Support */ ;
+		cfputs(x, "502 command not implemented");
+		return (1);
+		}
+
+
+	cfputs(x, "211-feature list follows");
+	while (1) {
+		if (sfgets(x, line, sizeof(line)) == NULL) {
+			syslog(LOG_NOTICE, "lost server in FEAT response");
+			exit (1);
+			}
+		else if (*line != ' ') { 
+
+			/*
+			 * RFC2389 specifies exactly one space in this
+			 * multi-line response.  Nothing else.
+			 */
+
+			break;
+			}
+
+
+		/* Get feature from server response ...
+		 */
+
+		copy_string(serverfeature, line, sizeof(serverfeature));
+		strupr(serverfeature);
+
+
+		/* ... and compare it against our feature list
+		 */
+
+
+		p = proxyfeatlist;
+		while (*get_quoted(&p, ':', word, sizeof(word)) != 0) {
+			if (strcmp(word, serverfeature) == 0) {
+				snprintf (line, sizeof(line) - 4, " %s", word);
+				cfputs(x, line);
+				break;
+				}
+			}
+		}
+
+	cfputs(x, "211 end");
+	return (0);
+}
 
 int setvar(ftp_t *x, char *var, char *value)
 {
@@ -1129,9 +1204,14 @@ int run_ccp(ftp_t *x, char *cmd, char *par)
 }
 
 
+	/*
+	 * dologin() accepts now blanks with in and at the end of
+	 * passwords - 22JAN02asg
+	 */
 
 int dologin(ftp_t *x)
 {
+	int	c, i, rc;
 	char	*p, word[80], line[300];
 	struct hostent *hostp;
 	struct sockaddr_in saddr;
@@ -1140,7 +1220,17 @@ int dologin(ftp_t *x)
 		if (readline_fd(x, 0, line, sizeof(line)) == NULL)
 			return (1);
 
-		p = noctrl(line);
+		if (x->config->allow_passwdblanks == 0)
+			p = noctrl(line);
+		else {
+			for (i=strlen(line); i>=0; i--) {
+				if ((c = line[i]) != '\n'  &&  c != '\r') {
+					line[i+1] = 0;
+					break;
+					}
+				}
+			}
+
 		get_word(&p, word, sizeof(word));
 		strupr(word);
 		if (strcmp(word, "USER") == 0) {
@@ -1152,8 +1242,12 @@ int dologin(ftp_t *x)
 				cfputs(x, "503 give USER first");
 				continue;
 				}
-				
-			get_word(&p, x->password, sizeof(x->password));
+
+			if (x->config->allow_passwdblanks == 0)
+				get_word(&p, x->password, sizeof(x->password)); 
+			else
+				copy_string(x->password, p, sizeof(x->password));
+
 			break;
 			}
 		else if (strcmp(word, "QUIT") == 0) {
@@ -1288,8 +1382,36 @@ int dologin(ftp_t *x)
 
 	/*
 	 * Login auf FTP-Server.
+	 *
+	 * Complete rewrite because of servers wanting no password after
+	 * login of anonymous user.
+	 *
 	 */
 
+	rc = sfputc(x, "USER", x->username, line, sizeof(line), NULL);
+
+	if (rc == 230) {
+		cfputs(x, "230 login accepted");
+		syslog(LOG_NOTICE, "login accepted: %s@%s, no password needed.", x->username, x->server.name);
+		return (0);
+		}
+	else if (rc != 331) {
+		cfputs(x, "500 service unavailable");
+		syslog(LOG_NOTICE, "-ERR: unexpected reply to USER: %s", line);
+		exit (1);
+		}
+	else if (sfputc(x, "PASS", x->password, line, sizeof(line), NULL) != 230) {
+		cfputs(x, "530 bad login");
+		syslog(LOG_NOTICE, "-ERR: reply to PASS: %s", line);
+		exit (1);
+		}
+
+	cfputs(x, "230 login accepted");
+	syslog(LOG_NOTICE, "login accepted: %s@%s", x->username, x->server.name);
+
+	return (0);
+
+/*
 	if (sfputc(x, "USER", x->username, line, sizeof(line), NULL) != 331) {
 		cfputs(x, "500 service unavailable");
 		syslog(LOG_NOTICE, "-ERR: unexpected reply to USER: %s", line);
@@ -1305,6 +1427,9 @@ int dologin(ftp_t *x)
 	syslog(LOG_NOTICE, "login accepted: %s@%s", x->username, x->server.name);
 
 	return (0);
+*/
+
+
 }
 
 
@@ -1357,12 +1482,17 @@ int proxy_request(config_t *config)
 	 * Set socket options to prevent us from the rare case that
 	 * we transfer data to/from the client before the client has
 	 * seen our "150 ..." message.
+	 * Seems so that is doesn't work on all systems.
+	 * So temporary only enable it on linux. 
 	 */
+
+#if defined(__linux__)
 
 	rc = 1;
 	if (setsockopt(1, SOL_TCP, TCP_NODELAY, &rc, sizeof(rc)) != 0)
 		syslog(LOG_NOTICE, "can't set TCP_NODELAY, error= %m");
 
+#endif
 
 	if (config->bsize <= 0)
 		config->bsize = 1024;
@@ -1495,6 +1625,8 @@ int proxy_request(config_t *config)
 			}
 		else if (strcmp(command, "PORT") == 0)
 			doport(x, command, parameter);
+		else if (strcmp(command, "FEAT") == 0)
+			dofeat(x);
 		else if (strcmp(command, "PASV") == 0)
 			dopasv(x, command, parameter);
 		else if (strcmp(command, "LIST") == 0  ||  strcmp(command, "NLST") == 0) {

@@ -40,6 +40,8 @@ typedef struct _config {
     int		timeout;
 
     int		selectserver;
+    int		allow_anyremote;
+
     union {
 	char	server[200];
 	char	*serverlist;
@@ -50,6 +52,7 @@ typedef struct _config {
     char	varname[80];
 
     int		allow_blanks;
+    int		allow_passwdblanks;
     int		monitor;
     int		bsize;
 

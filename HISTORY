@@ -2,6 +2,38 @@
 ** Notice: Version 1.0.2 - 1.0.6 and 1.0.9 - 1.1.1 were never released
            to the public.
 
+Version 1.1.5 - 04Feb2002asg
+- --------------------------
+
+  * Changed 'dologin()' so that ftp.proxy now supports server that do not
+    want a password after the 'USER' command.
+
+  * Added support for the FEAT command.
+    ftp.proxy only report features to the client that are support by both
+    the remote ftpserver and the ftp.proxy.
+
+  * Disabled the modification in  request handling made in 1.1.4 for
+    non-linux systems.  
+
+  * Added `-y' to allow any data ports on any remote interfaces.  Use this
+    option the following case:
+
+	The proxy connects to an FTP server which runs on a network card
+	with multiple IP numbers, a data connection is initiated (either
+	PORT or PASV) and the proxy refuses the connect because the remote
+	port is not on the interface the proxy uses for the data connection.
+	This happens if e.g. the remote server runs on eth0:2 but the
+	server uses eth0 for it's data connection port.  This is clearly
+	the server's fault, but anyway.  ftp.redhat.com was reported to
+	work that way.
+    Try to avoid using this option, because it can cause security problems.
+
+  * Changed log facility to LOG_FTP. (Hope this will work on all systems.) 
+
+  * ftp.proxy now allows blanks and other special charackters in passwords.
+    Added new parameter to allow this. (ftp.proxy -B)
+
+
 Version 1.1.4 - 21Jan2002asg
 - --------------------------
 
