@@ -30,7 +30,7 @@
 #include <stdarg.h>
 
 #include <signal.h>
-#include <wait.h>
+#include <sys/wait.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -50,7 +50,7 @@
 char	*program =		"";
 char	progname[80] =		"";
 
-static char	*version =	"ftp.proxy version: 1.1.2  asg@daemons.de";
+static char	*version =	"ftp.proxy version: 1.1.3  asg@daemons.de";
 
 int	debug =			0;
 int	extralog =		0;

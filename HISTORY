@@ -1,6 +1,21 @@
 
 ** Notice: Version 1.0.2 - 1.0.6 and 1.0.9 - 1.1.1 were never released to the public.
 
+Version 1.1.3 - 06Dec2001asg
+- --------------------------
+
+  * Fixed missing entry in Syslog output. Mentioned by Markus Meitner. 
+  
+  * Changed array name MAXBSIZE to FTPMAXBSIZE to solve conflict when
+    compiling under NetBSD or SUN Solaris. Mentioned by Denis Ahrens.  
+ 
+  * Changed path for include wait.h to sys/wait.h in all sources to 
+    improve compatibility to NetBSD or SUN Solaris. 
+    Mentioned by Denis Ahrens.  
+
+  * Added support for the XCUP command.
+
+
 Version 1.1.2 - 13NOV2001asg
 - --------------------------
 

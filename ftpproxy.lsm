@@ -1,15 +1,15 @@
 
 Begin3
 Title:			ftpproxy
-Version:		1.1.2
-Entered-date:		13 NOVEMBER 2001
+Version:		1.1.3
+Entered-date:		06 DECEMBER 2001
 Description:		FTP proxy with optional access and command control
 			and client monitoring.
 Keywords:		FTP, proxy, firewall
 Author:			wzk@quietsche-entchen.de (Wolfgang Zekoll)
 			asg@daemons.de (Andreas Schoenberg)
 Maintained-by:		asg@daemons.de (Andreas Schoenberg)
-Primary-site:
+Primary-site:		http://ftp.daemons.de/
 Alternate-site:
 Original-site:
 Platforms:

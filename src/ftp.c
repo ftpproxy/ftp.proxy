@@ -31,7 +31,7 @@
 
 #include <time.h>
 #include <signal.h>
-#include <wait.h>
+#include <sys/wait.h>
 #include <ctype.h>
 #include <errno.h>
 
@@ -86,6 +86,7 @@ ftpcmd_t cmdtab[] = {
     { "STRU", 1, 0, 0,	0, /* 200, */ 0 },	/* wird nicht unterstuetzt */
     { "SYST", 0, 0, 0,	215, 0 },
     { "TYPE", 1, 0, 0,	200, 0 },
+    { "XCUP", 1, 1, 1,	200, 1 },
     { "XCWD", 1, 1, 1,	250, 1 },
     { "XMKD", 1, 1, 1,	257, 1 },
     { "XPWD", 0, 0, 0,	257, 0 },
@@ -372,7 +373,7 @@ int getc_fd(ftp_t *x, int fd)
 					x->ch.bytes = 0;
 					}
 				else if (x->ch.state == PORT_CONNECTED) {
-					char	buffer[MAXBSIZE + 10];
+					char	buffer[FTPMAXBSIZE + 10];
 
 					if (x->ch.operation == 0) {
 						if (earlyreported == 0) {
@@ -579,7 +580,7 @@ int doquit(ftp_t *x)
 	char	resp[200];
 
 	if ((rc = sfputc(x, "QUIT", "", resp, sizeof(resp), NULL)) != 221)
-		syslog(LOG_NOTICE, "unexpected resonse to QUIT: ", resp);
+		syslog(LOG_NOTICE, "unexpected resonse to QUIT: %s", resp);
 
 	cfputs(x, "221 goodbye");
 	syslog(LOG_NOTICE, "%d QUIT", rc);
@@ -1352,8 +1353,8 @@ int proxy_request(config_t *config)
 	set_signals();
 	if (config->bsize <= 0)
 		config->bsize = 1024;
-	else if (config->bsize > MAXBSIZE)
-		config->bsize = MAXBSIZE;
+	else if (config->bsize > FTPMAXBSIZE)
+		config->bsize = FTPMAXBSIZE;
 
 	x = allocate(sizeof(ftp_t));
 	x->config = config;

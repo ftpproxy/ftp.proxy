@@ -2,8 +2,8 @@
 CC =		gcc
 CFLAGS =	-O2 -Wall -ggdb
 
-DIR =		ftpproxy-1.1.2
-TAR =		ftpproxy-1.1.2
+DIR =		ftpproxy-1.1.3
+TAR =		ftpproxy-1.1.3
 
 FTPPROXY =	main.o ftp.o ip-lib.o lib.o
 

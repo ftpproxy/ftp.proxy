@@ -33,7 +33,7 @@ extern int debug;
 extern int extralog;
 
 
-#define	MAXBSIZE		4096
+#define	FTPMAXBSIZE		4096
 
 
 typedef struct _config {
