@@ -3,8 +3,10 @@
            to the public.
 
 
-Version 1.1.6 - 27FEB2002asg
+Version 1.1.6 - 28NOV2002asg
 - --------------------------
+
+  * Changed GPL to current version.
 
   * Changed getc_fd to handle servers that close the data connection.
 
