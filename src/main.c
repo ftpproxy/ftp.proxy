@@ -302,6 +302,7 @@ int main(int argc, char *argv[], char *envp[])
 			sock = bind_to_port("", bindport);
 			acceptloop(sock);
 			}
+		signal(SIGCHLD, SIG_DFL);
 		}	
 
 	proxy_request(config);
