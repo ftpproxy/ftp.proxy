@@ -2,11 +2,24 @@
 ** Notice: Version 1.0.2 - 1.0.6 and 1.0.9 - 1.1.1 were never released
            to the public.
 
+Version 1.2.2 - 16122003asg
+- --------------------------------
+
+  * Fixed a error in ending an connection after receiving "QUIT".
+
+  * Added support for configuration files. Two new parameters are
+    added for this. (-f and -F)
+
+  * renamed `dcp' to `ctp' because we thought that `connection translation
+    programs' gives a better idea of what the really do. 
+
+
 Version 1.2.1 - 19082003asg
 - --------------------------------
 
   * Fixed a bug in dologin.
     Now the use of ftp.proxy with a fixed server works again.
+
 
 Version 1.2.0 - 11072003asg
 - --------------------------------
@@ -16,12 +29,14 @@ Version 1.2.0 - 11072003asg
     releases a major number.
     So this new release will start with 1.2.0
 
+
 Version 1.1.7.pre3 - 09072003asg
 - --------------------------------
 
   * Fixed missing line in the do_login function. Could solve unexpected
     behaviour of ftp.proxy.
     Mentioned by Michael A. Meiszl and Rasca Gmelch.
+
 
 Version 1.1.7.pre2 - 06042003asg
 - --------------------------------
@@ -57,6 +72,7 @@ Version 1.1.7.pre1 - 04042003asg
 
     The DCP's are based on the idea of 'connection translation program'
     from Damian Ivereigh and replaces this feature introduced in 1.1.6.beta6
+
 
 Version 1.1.6.beta8 - 25MAR2003asg
 - ----------------------------------

@@ -36,6 +36,8 @@ extern char progname[80];
 
 extern int debug;
 extern int extralog;
+extern int bindport;
+extern int daemonmode;
 
 extern int acceptloop(int sock);
 
@@ -43,6 +45,8 @@ extern int acceptloop(int sock);
 
 
 typedef struct _config {
+    char	configfile[200];
+
     int		standalone;
     int		timeout;
 
@@ -54,7 +58,7 @@ typedef struct _config {
 
     char	acp[200];
     char	ccp[200];
-    char	dcp[200];
+    char	ctp[200];
     char	varname[80];
 
     int		allow_blanks;
@@ -168,6 +172,9 @@ typedef struct _ftp {
     unsigned long datain, dataout;
     } ftp_t;
 
+
+extern int readconfig(config_t *config, char *filename, char *section);
+extern int printconfig(config_t *config);
 
 extern int proxy_request(config_t *config);
 

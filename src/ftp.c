@@ -1008,13 +1008,13 @@ static char *getvarname(char **here, char *var, int size)
 	return (var);
 }
 
-int run_trp(ftp_t *x)
+int run_ctp(ftp_t *x)
 {
 	int	rc, pid, pfd[2];
 	char	line[300];
 	FILE	*fp;
 	
-	if (*x->config->dcp == 0)
+	if (*x->config->ctp == 0)
 		return (0);
 
 	rc = 0;
@@ -1035,7 +1035,7 @@ int run_trp(ftp_t *x)
 		close(pfd[0]);
 		set_variables(x);
 			
-		copy_string(line, x->config->dcp, sizeof(line));
+		copy_string(line, x->config->ctp, sizeof(line));
 		argc = split(line, argv, ' ', 30);
 		argv[argc] = NULL;
 		execvp(argv[0], argv);
@@ -1414,7 +1414,7 @@ int dologin(ftp_t *x)
 		}
 
 
-	if (*x->config->dcp != 0) {
+	if (*x->config->ctp != 0) {
 
 		/*
 		 * We are extremly liberate here with server selection
@@ -1525,11 +1525,11 @@ int dologin(ftp_t *x)
          * Call the dynamic configuration program.
          */
 
-        if (*x->config->dcp != 0) {
+        if (*x->config->ctp != 0) {
 		x->server.port = get_port(x->server.name, 21);
 
-                if (run_trp(x) != 0)
-                        exit (0);       /* Never happens, we exit in run_trp() */
+                if (run_ctp(x) != 0)
+                        exit (0);       /* Never happens, we exit in run_ctp() */
 
 		if (debug != 0) {
 	                fprintf (stderr, "trp debug: server= %s:%u, login= %s, passwd= %s",
@@ -1770,7 +1770,17 @@ int proxy_request(config_t *config)
 		}
 
 	x->port = get_interface_info(0, x->interface, sizeof(x->interface));
-	syslog(LOG_NOTICE, "connected to client: %s", x->client);
+	syslog(LOG_NOTICE, "connected to client: %s, interface= %s:%u", x->client,
+				x->interface, x->port);
+
+	if (*x->config->configfile != 0) {
+		if (readconfig(x->config, x->config->configfile, x->interface) == 0) {
+			cfputs(x, "421 not available");
+			syslog(LOG_NOTICE, "-ERR: unconfigured interface: %s", x->interface);
+			exit (1);
+			}
+		}
+
 	syslog(LOG_NOTICE, "info: monitor mode: %s, ccp: %s",
 			x->config->monitor == 0? "off": "on",
 			*x->config->ccp == 0? "<unset>": x->config->ccp);
@@ -1872,6 +1882,7 @@ int proxy_request(config_t *config)
 		if (strcmp(command, "QUIT") == 0) {
 /*		        run_ccp(x, "QUIT", ""); */
 			doquit(x);
+			break;
 			}
 		else if (strcmp(command, "PORT") == 0)
 			doport(x, command, parameter);

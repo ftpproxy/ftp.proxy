@@ -113,16 +113,18 @@ Furthermore the acp's stdout is connected to the FTP client and
 it's stderr is read by \fIftp.proxy\fR which writes the acp's stderr output
 to syslog.
 .PP
-Notice also that a non-zero trp exit code signals \fIftp.proxy\fR that
+Notice also that a non-zero acp exit code signals \fIftp.proxy\fR that
 something's wrong and that \fIftp.proxy\fR should terminate.
 .SS "Connection Translation"
 Beginning with version 1.1.6 \fIftp.proxy\fR supports connection
-translation programs (trp's).
-A trp can completly overwrite the user's server selection and login.
-A trp receives the same environment variables like an acp and
-returns server and login information on it's stdout.
-The format of the trp output lines is
-.EX "\fIvariable\fR \fB<whitespace>\fR|\fB=\fR [\fB<whitespace>\fR] \fIvalue\fR"
+translation programs (ctp's).
+A ctp can completly overwrite the user's server selection and login.
+If configured the ctp is called before the acp.
+It receives the same environment variables like the acp and
+returns server and login information that should \fIftp.proxy\fR
+for the server connection on it's stdout.
+The format of the ctp output lines is
+.EX "\fIvariable\fR [\fB<whitespace>\fR]\fB=\fR [\fB<whitespace>\fR] \fIvalue\fR"
 where \fIvariable\fR is one of
 .PP
 .RS
@@ -139,6 +141,11 @@ SERVER, LOGIN, PASSWD, PORT
 as variable names.
 Furthermore the case of the variable names doesn't matter and any whitespace
 around \fIvalue\fR is ignored.
+.PP
+The tcp can deny the proxy request by exiting with an non-zero exit code,
+In which case \fIftp.proxy\fR drops the connection immediately.
+Alternativly the tcp can also print a line starting with \fB-ERR\fR,
+which is written to syslog before the connection is closed.
 .SS "Command Control"
 If a command control program (ccp) is given with the \fB-c\fR option this
 program is called for the FTP commands
@@ -215,6 +222,102 @@ Monitoring may not work with all server systems since the output of the
 in not completely defined.
 If the directory can not be clearly determined \fIftp.proxy\fR will
 terminate.
+.SH "CONFIGURATION FILE"
+\fIftp.proxy\fR can take most of its command line options also from
+a configuration file which can be set with the \fB-f\fR option.
+.PP
+The following options can be set:
+.TP
+\fBacp\fR \fI/path/to/acp\fR
+sets the path to the access control program (\fB-a\fR option).
+.TP
+\fBallow-anyremote\fR yes|no
+if enabled \fIftp.proxy\fR does not check the remote's end in data
+connection, required for some bad multi-homed servers and FXP (\fB-y\fR
+option).
+.TP
+\fBallow-blanks\fR yes|no
+allows blanks in FTP command parameters (\fB-b\fR option).
+.TP
+\fBallow-passwdblanks\fR yes|no
+allows blanks in the FTP login password (\fB-B\fR option).
+.TP
+\fBbind\fR \fIportnum\fR
+sets the port number to which \fIftp.proxy\fR should bind to,
+activates daemon mode (\fB-D\fR option).
+.TP
+\fBccp\fR \fI/path/to/ccp\fR
+sets the path to the command control command (\fB-c\fR option).
+.TP
+\fBctp\fR \fI/path/to/ctp\fR
+sets the path to the connection translation program (\fB-x\fR option).
+.TP
+\fBdebug\fR yes|no
+turns debugging mode on or off (\fB-d\fR option).
+.TP
+\fImonitormode\fR yes|no
+enables monitor mode (\fB-m\fR option).
+.TP
+\fIproxy-routing\fR yes|no
+if enabled \fIftp.proxy\fR uses the last `@' in the username to determine
+to which server it should connect.
+This make proxy hopping (or routing) possible (\fB-u\fR option).
+.TP
+\fIselectserver\fR yes|no
+enables client side server selection, disables the \fBserver\fR option
+(\fB-e\fR option).
+.TP
+\fIserver\fR \fIftpserver\fR
+sets the connection's FTP server, disables \fBselectserver\fR.
+.TP
+\fIserverlist\fR \fIlist-of-allowed-server\fR
+specifies a command separated list of servers to which the clients are
+allowed to connect (\fB-s\fR option).
+.TP
+\fItimeout\fR \fItimeout\fR
+set the timeout in seconds.
+.PP
+Notice that the file can contain comments and blank lines (usual UN*X-style)
+but \fIftp.proxy\fR terminates immediately with an error code if an
+unknown or invalid configuration option is found.
+.SS "Interface specific configurations"
+\fIftp.proxy\fR's configuration file supports interface specific configuration
+sections.
+Such section begin with a line that starts with
+.TP
+[\fIinterface-ip\fR]
+.PP
+followed by the configuration options for connections on this specific
+interface.
+\fIftp.proxy\fR checks for such sections immidiately after the client
+connection is accepted.
+If it finds at least one interface specific section in the configuration
+file but none for the current interface it considers itself to be not
+configured for it and drops the connection sending a `421 not available'
+message to the client.
+.PP
+\fIftp.proxy\fR accepts all global configuration options from
+above (allthough not all make sense, e.g. \fBbind\fR) in interface specific
+section.
+That is, \fIftp.proxy\fR can have completely different configurations on
+different interfaces.
+But to deactivate a non-boolean option, e.g. \fBctp\fR you can not simply
+give the option without a value, this would be considered as `bad
+configuration option'.
+Instead you must supply a single dash `\fB-\fR' to clear an option.
+.SS "Configuration checking"
+\fIftp.proxy\fR prints an error message and terminates immediately if it find
+an unknown or bad configuration option.
+More worse, these error messages are printed to \fIftp.proxy\fR's stderr
+and not to syslog which makes it a little bit difficult to observe.
+\fIftp.proxy\fR addresses this issue by supporting the \fB-F\fR option.
+.PP
+The \fB-F\fR option sets the configuration file and the `check-and-print'
+option, that is \fIftp.proxy\fR will only read, check and print it's
+configuration options as they are set after reading the configuration.
+An interface IP-number may be given as optional command line parameter
+to make \fIftp.proxy\fR print the configuration for this particular
+interface.
 .SH OPTIONS
 The following options are available:
 .TP
@@ -229,12 +332,22 @@ allows blanks in filenames.
 allows blanks and other special charackters in passwords. 
 .TP
 \fB-c\fR \fIccp\fR
-set a command control program that grants or denies the usage of FTP
+sets a command control program that grants or denies the usage of FTP
 commands through \fIftp.proxy\fR.
 .TP
 \fB-d\fR
 enter debug mode, the communication between server and client is written
 to stderr.
+.TP
+\fB-f\fR \fIconfigfile\fR
+sets \fIftp.proxy\fR's configuration file.
+.TP
+\fB-F\fR \fIconfigfile\fR [\fIinterface\fR]
+read and print the proxy configuration for \fIinterface\fR from
+\fIconfigfile\fR.
+If \fIinterface\fR is missing the global configuration is printed.
+This is a check-only option, after the configuration has been printed
+\fIftp.proxy\fR terminates, no connection handling is done.
 .TP
 \fB-e\fR
 enable client-side server selection.
@@ -268,7 +381,7 @@ abused to do 'proxy hopping'!
 set \fIprefix\fR as variable prefix for the variable passwd to the access
 and command control program.
 .TP
-\fB-x\fR \fItrp\fR
+\fB-x\fR \fIctp\fR
 set a connection translation program to overwrite the server and login
 information supplied by the user.
 .TP

@@ -9,7 +9,7 @@
 CC =		gcc
 CFLAGS =	-O2 -Wall -ggdb -DVERSION=\"$(VERSION)\" ${OSFLAG}
 
-FTPPROXY =	main.o ftp.o daemon.o ip-lib.o lib.o
+FTPPROXY =	main.o config.o ftp.o daemon.o ip-lib.o lib.o
 
 TARGETS =	ftp.proxy
 

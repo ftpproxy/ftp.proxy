@@ -6,6 +6,6 @@
 #
 
 dir=`dirname $0`
-exec $dir/operator.dcp $dir/proxy-user.conf
+exec $dir/operator.ctp $dir/proxy-user.conf
 exit 1
 

@@ -60,10 +60,10 @@ char	progname[80] =		"";
 int	debug =			0;
 int	extralog =		0;
 
-int	uid =			-1;
-int	gid =			-2;
-int	bindport =		21;
+int	bindport =		0;
 int	daemonmode =		0;
+
+int	showconfig =		0;
 
 extern int acceptloop(int sock);
 
@@ -124,6 +124,15 @@ int main(int argc, char *argv[], char *envp[])
 				}
 			else if (c == 'e')
 				config->selectserver = 1;
+			else if (c == 'f'  ||  c == 'F') {
+				if (k >= argc)
+					missing_arg(c, "configuration file");
+
+				if (c == 'F')
+					showconfig = 1;
+
+				copy_string(config->configfile, argv[k++], sizeof(config->configfile));
+				}
 			else if (c == 'l')
 				extralog = 1;
 			else if (c == 'm')
@@ -164,7 +173,7 @@ int main(int argc, char *argv[], char *envp[])
                                 if (k >= argc)
                                         missing_arg(c, "dynamic configuration program");
 
-                                copy_string(config->dcp, argv[k++], sizeof(config->dcp));
+                                copy_string(config->ctp, argv[k++], sizeof(config->ctp));
                                 }
 			else if (c == 'y') {
 				
@@ -201,15 +210,50 @@ int main(int argc, char *argv[], char *envp[])
 		}
 
 
+	/*
+	 * Print configuration if requested and exit
+	 */
+
+	if (showconfig != 0) {
+		int	havesection = 0;
+		char	*interface = "";
+
+		readconfig(config, config->configfile, "");
+		if (k < argc) {
+			interface = argv[k++];
+			havesection = readconfig(config, config->configfile, interface);
+			}
+
+		if (*interface == 0)
+			printf ("interface: global\n");
+		else {
+			printf ("interface: %s\n", interface);
+			printf ("status: %s\n", (havesection != 0)? "configured": "unconfigured");
+			}
+
+		printconfig(config);
+		exit (0);
+		}
+
+
+
+	/*
+	 * Normal processing starts here.
+	 */
+
+
 	if (config->selectserver == 0) {
 
 		/*
-		 * Fixed proxy server together with DCP doesn't make
+		 * Fixed proxy server together with CTP doesn't make
 		 * much sense -- 040303asg
 		 */
 
-		if (*config->dcp != 0)
-			syslog(LOG_NOTICE, "FTP server configured with dcp: ignoring server");
+		if (*config->ctp != 0) {
+			p = argv[k++];
+/*			syslog(LOG_NOTICE, "configured to use ctp, ignoring server argument: %s", p); */
+			fprintf (stderr, "%s: configured to use ctp, ignoring server argument: %s", program, p);
+			}
 		else {
 			if (k >= argc) {
 				fprintf (stderr, "usage: %s [<options>] <server>\n", program);
@@ -219,12 +263,17 @@ int main(int argc, char *argv[], char *envp[])
 			copy_string(config->server, argv[k++], sizeof(config->server));
 			}
 		}
-	
+
 	if (k < argc) {
 		fprintf (stderr, "%s: extra arguments on command line: %s ...\n", program, argv[k]);
 		exit (1);
 		}
-		
+
+
+	if (*config->configfile != 0) {
+		syslog(LOG_NOTICE, "configured to use config file. %s", p);
+		readconfig(config, config->configfile, "");
+		}
 
 	if (daemonmode != 0) {
 		signal(SIGCHLD, SIG_IGN);
