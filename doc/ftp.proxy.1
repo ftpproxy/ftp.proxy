@@ -13,7 +13,7 @@
 .in -0.5i
 .sp
 ..
-.TH FTP.PROXY 1 "23 JANUARY 2003"
+.TH FTP.PROXY 1 "10 JUNE 2005"
 .SH NAME
 ftp.proxy \- FTP proxy server
 .SH SYNOPSIS
@@ -276,6 +276,9 @@ sets the connection's FTP server, disables \fBselectserver\fR.
 specifies a command separated list of servers to which the clients are
 allowed to connect (\fB-s\fR option).
 .TP
+\fIserverdelimiter\fR \fIcharset\fR
+define charset for the username/server delimeter, default is `@'.
+.TP
 \fIsourceip\fR \fIip-number\fR
 defines the IP address for the outgoing control connection to the remote
 server, which also determines the local IP address for data transmissions.
@@ -343,6 +346,9 @@ allows blanks and other special charackters in passwords.
 \fB-c\fR \fIccp\fR
 sets a command control program that grants or denies the usage of FTP
 commands through \fIftp.proxy\fR.
+.TP
+\fB-C\fR \fIcharset\fR
+define \fIcharset\fR for the username/server delimeter, default is `@'.
 .TP
 \fB-d\fR
 enter debug mode, the communication between server and client is written

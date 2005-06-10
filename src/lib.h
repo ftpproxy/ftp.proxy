@@ -45,6 +45,7 @@ char *get_quoted(char **from, int delim, char *to, int max);
 int split(char *line, char *ptr[], int seq, int max);
 char *copy_string(char *y, char *x, int len);
 int strpcmp(char *string, char *pattern);
+char *strxchr(char *string, char *delim, int right);
 
 #endif
 

@@ -60,6 +60,7 @@ typedef struct _config {
     char	ccp[200];
     char	ctp[200];
     char	varname[80];
+    char	serverdelim[20];
 
     int		allow_blanks;
     int		allow_passwdblanks;

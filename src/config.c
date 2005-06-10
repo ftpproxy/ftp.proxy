@@ -3,7 +3,7 @@
 
     File: ftpproxy/config.c 
 
-    Copyright (C) 2003  Andreas Schoenberg  <asg@ftpproxy.org> 
+    Copyright (C) 2003, 2005  Andreas Schoenberg  <asg@ftpproxy.org> 
   
     This software is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -185,6 +185,8 @@ int readconfig(config_t *config, char *filename, char *section)
 			}
 		else if (strcmp(word, "serverlist") == 0)
 			config->serverlist = strdup(skip_ws(p));
+		else if (strcmp(word, "serverdelimiter") == 0)
+			get_parameter(&p, word, config->serverdelim, sizeof(config->serverdelim), filename, lineno);
 		else if (strcmp(word, "sourceip") == 0)
 			get_parameter(&p, word, config->sourceip, sizeof(config->sourceip), filename, lineno);
 

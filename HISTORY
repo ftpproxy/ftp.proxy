@@ -5,6 +5,11 @@
 Version 1.2.4
 - --------------------------------
 
+
+  * Added new parameter (-C) to allow the change of the server delimiter. 
+
+  * Updates on INSTALL documentation.
+
   * Fixed bug in waitpid handling in daemon mode again. #10008
     Mentioned by Simon Baatz
 

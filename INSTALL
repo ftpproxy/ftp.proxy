@@ -13,6 +13,12 @@ to be completed ...
 	OSFLAG = -DSOLARIS
 	OSLIB = -lnsl -lsocket
 	
+	For BSD like systems you must use gmake instead of make!
+
+	On MacOS X is could be necessary to change the compiler setting in src/Makefile to: 
+	
+	CC =            cc
+
 	Note: You must have gnu make and gcc installed on your system.
 
 

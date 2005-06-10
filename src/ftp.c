@@ -1421,22 +1421,26 @@ int dologin(ftp_t *x)
 		 * anything here -- 03APR04asg
 		 */
 
-		if ((p = strchr(x->username, '@')) == NULL  &&  (p = strchr(x->username, '%')) == NULL)
+/*		if ((p = strchr(x->username, '@')) == NULL  &&  (p = strchr(x->username, '%')) == NULL) */
+		if ((p = strxchr(x->username, x->config->serverdelim, x->config->use_last_at)) == NULL)
 			*x->server.name = 0;
-		else if (x->config->use_last_at == 0) {
+		else if (1  ||  x->config->use_last_at == 0) {
 			*p++ = 0;
 			copy_string(x->server.name, p, sizeof(x->server.name));
 			}
-		else {
-			if ((p = strrchr(x->username, '@')) == NULL)
-				p = strrchr(x->username, '%');
-
-			*p++ = 0;
-			copy_string(x->server.name, p, sizeof(x->server.name));
-			}
+/* wird nicht mehr gebraucht -- 10JUN05asg
+ *		else {
+ *			if ((p = strrchr(x->username, '@')) == NULL)
+ *				p = strrchr(x->username, '%');
+ *
+ *			*p++ = 0;
+ *			copy_string(x->server.name, p, sizeof(x->server.name));
+ *			}
+ */
 		}
 	else if (x->config->selectserver == 0) {
-		if ((p = strchr(x->username, '@')) != NULL  &&  (p = strchr(x->username, '%')) != NULL) {
+/*		if ((p = strchr(x->username, '@')) != NULL  &&  (p = strchr(x->username, '%')) != NULL) { */
+		if ((p = strxchr(x->username, x->config->serverdelim, x->config->use_last_at)) != NULL) {
 			cfputs(x, "500 service unavailable");
 			printerror(1, "-ERR", "hostname supplied: %s", p);
 			exit (1);
@@ -1452,20 +1456,23 @@ int dologin(ftp_t *x)
 		 * this behaviour.
 		 */
 
-		if (x->config->use_last_at == 0) {
-			if ((p = strchr(x->username, '@')) == NULL  &&  (p = strchr(x->username, '%')) == NULL) {
+		if (1  ||  x->config->use_last_at == 0) {
+/*			if ((p = strchr(x->username, '@')) == NULL  &&  (p = strchr(x->username, '%')) == NULL) { */
+			if ((p = strxchr(x->username, x->config->serverdelim, x->config->use_last_at)) == NULL) {
 				cfputs(x, "500 service unavailable");
 				printerror(1, "-ERR", "missing hostname");
 				exit (1);
 				}
 			}
-		else {
-			if ((p = strrchr(x->username, '@')) == NULL  &&  (p = strrchr(x->username, '%')) == NULL) {
-				cfputs(x, "500 service unavailable");
-				printerror(1, "-ERR", "missing hostname");
-				exit (1);
-				}
-			}
+/* ist ueberfluessig -- 10JUN05asg
+ *		else {
+ *			if ((p = strrchr(x->username, '@')) == NULL  &&  (p = strrchr(x->username, '%')) == NULL) {
+ *				cfputs(x, "500 service unavailable");
+ *				printerror(1, "-ERR", "missing hostname");
+ *				exit (1);
+ *				}
+ *			}
+ */
 
 
 		*p++ = 0;

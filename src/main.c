@@ -4,7 +4,7 @@
     File: ftpproxy/main.c
 
     Copyright (C) 1999, 2000  Wolfgang Zekoll  <wzk@quietsche-entchen.de>
-    Copyright (C) 2000, 2003  Andreas Schoenberg  <asg@ftpproxy.org>
+    Copyright (C) 2000, 2005  Andreas Schoenberg  <asg@ftpproxy.org>
   
     This software is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -172,6 +172,7 @@ int main(int argc, char *argv[], char *envp[])
         config->allow_passwdblanks = 0;
 	config->allow_anyremote = 0;
 	strcpy(config->varname, "PROXY_");
+	strcpy(config->serverdelim, "@");
 
 	openlog(program, LOG_PID, LOGFACILITY);
 
@@ -201,6 +202,12 @@ int main(int argc, char *argv[], char *envp[])
 
 				copy_string(config->ccp, argv[k++], sizeof(config->ccp));
 				}
+                        else if (c == 'C') {
+				if (k >= argc)
+				         missing_arg(c, "server delimeter");
+
+				copy_string(config->serverdelim, argv[k++], sizeof(config->serverdelim));
+			        }
 			else if (c == 'e')
 				config->selectserver = 1;
 			else if (c == 'f'  ||  c == 'F') {

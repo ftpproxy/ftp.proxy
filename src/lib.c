@@ -3,7 +3,7 @@
     File: ftpproxy/lib.c
     
     Copyright (C) 1999 by Wolfgang Zekoll  <wzk@quietsche-entchen.de>
-    Copyright (C) 2000, 2003  Andreas Schoenberg  <asg@ftpproxy.org>
+    Copyright (C) 2000, 2005  Andreas Schoenberg  <asg@ftpproxy.org>
 
     This source is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -324,5 +324,33 @@ int strpcmp(char *string, char *pattern)
 		return (strpcmp(string + 1, pattern + 1));
 
 	return (1);
+}
+
+char *strxchr(char *string, char *delim, int right)
+{
+	char	*p;
+
+	if (right == 0) {
+		int	c;
+
+		p = string;
+		while ((c = *p) != 0) {
+			if (strchr(delim, c) != NULL)
+				return (p);
+
+			p++;
+			}
+		}
+	else {
+		p = string + strlen(string) - 1;
+		while (p >= string) {
+			if (strchr(delim, *p) != NULL)
+				return (p);
+
+			p--;
+			}
+		}
+
+	return (NULL);
 }
 
