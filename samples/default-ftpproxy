@@ -1,0 +1,10 @@
+
+# Set to `yes' to run ftp.proxy in damon mode.
+START=no
+
+# Run as daemon on this port.
+PORT=21
+
+# Set any options required here.
+OPTIONS=
+

@@ -1,0 +1,99 @@
+#!/usr/bin/gawk -f
+#
+
+function p(name, val,   w) {
+	w = ENVIRON[name];
+	if (w == "")
+		w = val;
+
+	return (w);
+	}
+
+function setstatus(host, obj, component, status,   message) {
+
+	#
+	# Send status to system monitor daemon
+	#
+
+	if (smd == "")
+		return (0);
+
+	if (host == ""  ||  host == "-")
+		return (1);
+
+	if (status == "OK") {
+		status = "ok";
+		message = "server ready";
+		}
+	else if (status == "CONFIG") {
+		status = "major";
+		message = "proxy configuration error";
+		}
+	else if (status == "CONNECT") {
+		status = "major";
+		message = "error connecting to server";
+		}
+	else {
+		status = "minor";
+		message = "unknown error";
+		}
+
+	printf ("%s %s %s %s %s\n", host, obj, component, status, message) | smd;
+
+	return (0);
+	}
+
+
+BEGIN {
+	date = strftime("%Y%m%d", systime());
+	LOGFILE = sprintf ("/tmp/proxy-xfer-%s.log", date);
+
+#	smd = "/usr/local/sbin/sm status";
+	smd = "cat >>" LOGFILE;		# simulate system monitor daemon
+
+	date = strftime("%d.%m.%Y %H:%M:%S", systime());
+	name = p("PROXY_NAME");
+	duration = systime() - ENVIRON["FTP_STARTED"];
+
+	if ((client = p("FTP_CLIENTNAME")) == "")
+		client = p("FTP_CLIENT", "-");
+
+	server = p("FTP_SERVER", "-");
+	status = p("FTP_EXITSTATUS", "-");
+	line = sprintf ("%s %s", date, status);
+
+	#
+	# Log access
+	#
+
+	if (status != "ACCESS"  &&  status != "CONNECT") {
+		printf ("%s %s %s %s %s %d %d %d\n", date, status,
+			client, server, p("FTP_USER", "-"),
+			p("FTP_BYTES_CTS"), p("FTP_BYTES_STC"),
+			duration) >>LOGFILE;
+		}
+
+	#
+	# Set status if required
+	#
+
+	if (status == "OK") {
+		# Set proxy configuration status ...
+		setstatus(ENVIRON["HOSTNAME"], "proxy", ENVIRON["FTP_INTERFACE"], status);
+
+		# ... and server status to "ok".
+		setstatus(server, "server", status);
+		}
+
+	#
+	# Set errors if any
+	#
+
+	else if (status == "CONFIG"  ||  status == "SYSTEM")
+		setstatus(ENVIRON["HOSTNAME"], "proxy", ENVIRON["FTP_INTERFACE"], status);
+	else if (status == "CONNECT"  ||  status == "SERVER")
+		setstatus(server, "server", name, status);
+
+	exit (0);
+	}
+

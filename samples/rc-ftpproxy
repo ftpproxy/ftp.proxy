@@ -1,0 +1,73 @@
+#! /bin/sh
+# /etc/init.d/ftpproxy
+#
+# Written by Andreas Schoenberg <asg@ftpproxy.org>.
+
+#   ***  This init-script expects ftp.proxy in /usr/sbin. ***
+
+### BEGIN INIT INFO
+# Provides:          ftpproxy
+# Required-Start:    $local_fs $remote_fs $syslog $named $network $time
+# Required-Stop:     $local_fs $remote_fs $syslog $named $network
+# Should-Start:
+# Should-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: ftp.proxy - FTP proxy server
+# Description:       ftp.proxy - FTP proxy server
+### END INIT INFO
+
+set -e
+
+if ! [ -x "/lib/lsb/init-functions" ]; then
+  . /lib/lsb/init-functions
+else
+  echo "E: /lib/lsb/init-functions not found, lsb-base (>= 3.0-6) needed"
+  exit 1
+fi
+
+[ -r /etc/default/ftpproxy ] && . /etc/default/ftpproxy
+
+PATH=/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/sbin
+DAEMON=/usr/sbin/ftp.proxy
+CONF=/etc/ftpproxy.conf
+PORT=21
+PIDFILE=/var/run/ftpproxy.pid
+
+test -x $DAEMON || exit 0
+test -r $CONF || exit 0
+
+check_start_ftpproxy_option() {
+  if [ ! "$START" = "yes" ]; then
+    log_warning_msg "Not starting ftp.proxy, disabled via /etc/default/ftpproxy"
+    return 1
+  else
+    return 0
+  fi
+}
+
+case "$1" in
+  start)
+	if check_start_ftpproxy_option; then
+	  log_daemon_msg "Starting application level gateway for FTP" "ftp.proxy"
+	  start_daemon -p $PIDFILE $DAEMON -D $PORT $OPTIONS -f $CONF
+	  log_end_msg $?
+	fi
+    ;;
+  stop)
+	log_daemon_msg "Stopping application level gateway for FTP" "ftp.proxy"
+	killproc -p $PIDFILE $DAEMON
+	log_end_msg $?
+    ;;
+  force-reload|restart)
+    $0 stop
+    $0 start
+    ;;
+  *)
+    echo "Usage: /etc/init.d/ftpproxy {start|stop|restart|force-reload}"
+    exit 1
+    ;;
+esac
+
+exit 0
+

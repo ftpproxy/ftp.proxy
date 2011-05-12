@@ -1,0 +1,8 @@
+#!/bin/sh
+#
+
+FILE=/tmp/proxy-env-$FTP_PID.log
+( echo
+  env | grep '^FTP_' | sort ) >>$FILE
+exit 0
+
