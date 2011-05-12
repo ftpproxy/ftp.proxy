@@ -12,9 +12,9 @@
 
 
 
-if (~ $PROXY_FTPPATH /tmp/*) {		# add `/tmp' to disallow also `cd /tmp'
+if (~ $FTP_FTPPATH /tmp/*) {		# add `/tmp' to disallow also `cd /tmp'
 	echo permission denied >[1=2]
-	echo forbidden by path: $PROXY_COMMAND $PROXY_PARAMETER: $PROXY_FTPPATH
+	echo forbidden by path: $FTP_COMMAND $FTP_PARAMETER: $FTP_FTPPATH
 	}
 
 #
@@ -22,7 +22,7 @@ if (~ $PROXY_FTPPATH /tmp/*) {		# add `/tmp' to disallow also `cd /tmp'
 # a single line of output.
 #
 
-echo ccp log: $PROXY_COMMAND $PROXY_FTPPATH '[' ^ $PROXY_PARAMETER ^ ']'
+echo ccp log: $FTP_COMMAND $FTP_FTPPATH '[' ^ $FTP_PARAMETER ^ ']'
 
 
 
@@ -30,12 +30,12 @@ echo ccp log: $PROXY_COMMAND $PROXY_FTPPATH '[' ^ $PROXY_PARAMETER ^ ']'
 # Now analyze the command.
 #
 
-if (~ $PROXY_COMMAND STOR) {
+if (~ $FTP_COMMAND STOR) {
 	echo upload not allowed >[1=2]
 	exit 1
-} else if (~ $PROXY_COMMAND APPE STOU) {
+} else if (~ $FTP_COMMAND APPE STOU) {
 	exit 1
-} else if (~ $PROXY_COMMAND DELE RNFR RNTO MKD RMD SITE) {
+} else if (~ $FTP_COMMAND DELE RNFR RNTO MKD RMD SITE) {
 
 	#
 	# This turns the server into read-only.
@@ -43,13 +43,13 @@ if (~ $PROXY_COMMAND STOR) {
 
 	echo permission denied >[1=2]
 	exit 1
-} else if (~ $PROXY_COMMAND +EXIT) {
-	echo $PROXY_CCPCOLL collisions
+} else if (~ $FTP_COMMAND +EXIT) {
+	echo $FTP_CCPCOLL collisions
 	exit 0
 	}
 
 
-if (! ~ $PROXY_FTPHOME '') {
+if (! ~ $FTP_FTPHOME '') {
 
 	#
 	# We are in monitor mode.  Let's give our users chrooted environments.
@@ -59,7 +59,7 @@ if (! ~ $PROXY_FTPHOME '') {
 	# again.
 	#
 
-	if (! ~ $PROXY_FTPPATH $PROXY_FTPHOME ^ *) {
+	if (! ~ $FTP_FTPPATH $FTP_FTPHOME ^ *) {
 
 		#
 		# The user want's to access something outside his chrooted

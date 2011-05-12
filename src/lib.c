@@ -33,7 +33,6 @@
 
 #include "lib.h"
 
-#define	DEBUG(x)		
 
 
 void *allocate(size_t size)
@@ -67,20 +66,16 @@ static int _init_upper()
 {
 	unsigned int c;
 	
-	DEBUG( fprintf (stderr, "init upper[]\n"); )
 	for (c = 0; c < 256; c++)
 		upper[c] = c;
 
-	DEBUG( fprintf (stderr, "init uppercase letters\n"); )
 	for (c = 'a'; c < 'z'+1; c++)
 		upper[c] = 'A' + (c - 'a');
 
-	DEBUG( fprintf (stderr, "init umlaute\n"); )
 	upper[c = (unsigned char) 'ä'] = 'Ä';
 	upper[c = (unsigned char) 'ö'] = 'Ö';
 	upper[c = (unsigned char) 'ü'] = 'Ü';
 
-	DEBUG( fprintf (stderr, "init upper[] complete\n"); )
 	return (0);
 }
 
@@ -88,20 +83,16 @@ static int _init_lower()
 {
 	unsigned int c;
 	
-	DEBUG( fprintf (stderr, "init lower[]\n"); )
 	for (c = 0; c < 256; c++)
 		lower[c] = c;
 
-	DEBUG( fprintf (stderr, "init uppercase letters\n"); )
 	for (c = 'A'; c < 'Z'+1; c++)
 		lower[c] = 'a' + (c - 'A');
 
-	DEBUG( fprintf (stderr, "init umlaute\n"); )
 	lower[c = (unsigned char) 'Ä'] = 'ä';
 	lower[c = (unsigned char) 'Ö'] = 'ö';
 	lower[c = (unsigned char) 'Ü'] = 'ü';
 
-	DEBUG( fprintf (stderr, "init upper[] complete\n"); )
 	return (0);
 }
 
@@ -146,7 +137,7 @@ char *strlwr(char *string)
 	if (lower['0'] == 0)
 		_init_lower();
 		
-	p = string;
+	p = (unsigned char *) string;
 	while ((c = *p) != 0) {
 		*p++ = lower[c];
 		}
@@ -162,7 +153,7 @@ char *strupr(char *string)
 	if (upper['0'] == 0)
 		_init_upper();
 		
-	p = string;
+	p = (unsigned char *) string;
 	while ((c = *p) != 0) {
 		*p++ = upper[c];
 		}
@@ -185,10 +176,10 @@ char *noctrl(char *buffer)
 	int	len, i;
 	unsigned char *p;
 
-	if ((p = buffer) == NULL)
+	if ((p = (unsigned char *) buffer) == NULL)
 		return (NULL);
 
-	len = strlen(p);
+	len = strlen((char *) p);
         for (i=len-1; i>=0; i--) {
 		if (p[i] <= 32)
 			p[i] = '\0';
@@ -196,7 +187,7 @@ char *noctrl(char *buffer)
 			break;
 		}
 
-	return (p);
+	return ((char *) p);
 }
 
 char *get_word(char **from, char *to, int maxlen)
@@ -209,7 +200,7 @@ char *get_word(char **from, char *to, int maxlen)
 	while ((c = **from) != 0  &&  c <= 32)
 		*from += 1;
 
-	*(p = to) = k = 0;
+	*(p = (unsigned char *) to) = k = 0;
 	while ((c = **from) != 0) {
 		if (c == ' '  ||  c == '\t'  ||  c < 32)
 			break;

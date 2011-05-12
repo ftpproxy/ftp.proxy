@@ -2,9 +2,97 @@
 ** Notice: Version 1.0.2 - 1.0.6 and 1.0.9 - 1.1.1 were never released
            to the public.
 
+Version 2.1.0-beta5
+- -----------------
+
+  * Fix to compile on squeeze
+
+
+Version 2.1.0-beta4
+- -----------------
+
+  * Added `filecopy' mode to create local copies of all transfered files.
+
+  * Found bug in get_ftppath() that prevented the proxy to get absolute path
+    names for files.
+
+  * Changed file transfer logging for RETR, STOR etc.
+
+  * Added -L <facility>[,<logname>] option.
+
+
+Version 2.0.0-beta8
+- -----------------
+
+  * Fix in Makefile to create directories
+
+  * Fix in Makefile to honour INSTALL_PREFIX
+
+
+Version 2.0.0-beta7
+- -----------------
+
+  * Cleanup of debug printous
+
+  * New command line switch `-R' for transparent proxiing with transparent
+    login
+
+
+Version 2.0.0-beta5
+- -----------------
+
+  * If `-u' is set in non-server-selection mode then user@hostname
+    usernames are allowed.
+
+  * Transparent session redirection: found bug in configuration file.
+
+
+Version 2.0.0
+- -----------
+
+  * New command line switch `-r <accept|redirect|forward|forward-only>'
+    for transparent proxiing
+
+  * Enabled varprefix option again.
+
+  * The ENV Prefix changed from PROXY_ to FTP_ if you need the old behaviour
+    use the -v option.
+
+  * Updated the sample files to reflect changes in source.
+  
+  * Added FEAT to the CCP controlled features.
+
+  * Change to dologin to improve debug logging.
+
+  * Fix in dofeat to deal with server that are not really RFC2389 aware.
+
+  * Moved set_signals() to main.c, signals are now set even before we
+    enter the acceptloop() to get a proper clean up from daemon mode (e.g.
+    pidfile).
+
+  * Similiar to tcpproxy `-O <statdir>' defines a directory where
+    ftp.proxy put it's connection status information.
+
+  * More insignificant changes to ftp_t.
+
+  * Added statfile updates to sfputc().
+
+  * New source file procinfo.c (taken from tcpproxy) holds functions
+    for process status information.
+
+  *  Use `-P | -PP <pidfile>' to get a pidfile in standalone mode.
+
+  * New command line switch `-F <configfile>' prints ftp.proxy's
+    configuration.  The <configfile> is mandantory - if you don't have one
+    use `/dev/null'.
+
+  * Changed interface/port components in ftp_t to peer_t variable `i'.
+
+
 Version 1.2.4
 - --------------------------------
 
+  * Fixed typo in operator.ctp
 
   * Added new parameter (-C) to allow the change of the server delimiter. 
 
@@ -16,7 +104,7 @@ Version 1.2.4
   * Reworked logging:
 
       - If running in debug mode ftp.proxy will write it's messages 
-	hat went formerly to syslog to stderr now.
+	that went formerly to syslog to stderr now.
 
       - When ftp.proxy terminates succesfully or with an error it will
 	log a status line beginning with either `+OK:' or `-ERR:'
@@ -324,4 +412,5 @@ Version 1.0.1 - 27AUG1999wzk
   * Changed FTP session timeout to 15 minutes.
 
   * Added support for command control programs.
+
 

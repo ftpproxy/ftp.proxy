@@ -51,7 +51,8 @@
 
 int acceptloop(int sock)
 {
-	int	connect, pid, len;
+	unsigned int len;
+	int	connect, pid;
 	struct sockaddr_in client;
 
 	/*

@@ -24,15 +24,15 @@
 $ENV{PATH} = "/bin:/usr/bin:/sbin:/usr/sbin";
 
 
-if(!defined($ENV{PROXY_USERNAME}) or !defined($ENV{PROXY_PASSWD})) {
-	print STDERR "Please set the environment variables PROXY_USERNAME & PROXY_PASSWD\n";
+if(!defined($ENV{FTP_USER}) or !defined($ENV{FTP_PASSWORD})) {
+	print STDERR "Please set the environment variables FTP_USER & FTP_PASSWORD\n";
 	exit(1);
 }
 
-$PROXY_USERNAME = $ENV{PROXY_USERNAME};
-$PROXY_PASSWD   = $ENV{PROXY_PASSWD};
+$FTP_USERNAME = $ENV{FTP_USER};
+$FTP_PASSWD   = $ENV{FTP_PASSWORD};
 
-@pass = getpwnam("$PROXY_USERNAME");
+@pass = getpwnam("$FTP_USERNAME");
 if(!defined($pass[0])) {
 	print STDERR "Authentication failure...\n";
 	exit(1);
@@ -40,7 +40,7 @@ if(!defined($pass[0])) {
 
 $passwd = $pass[1];
 $salt   = substr($passwd,0,2);
-$mypass = crypt($PROXY_PASSWD,$salt);
+$mypass = crypt($FTP_PASSWD,$salt);
 
 $LOG = "/var/log/FTP_PROXY_LOG";
 open(LKFD,">>$LOG") || die "Cannot open $LOG: $!";
@@ -55,12 +55,12 @@ chomp($date);
 
 if($mypass ne $passwd) {
 	print STDERR "Authentication failure...\n";
-	print LKFD "$ts $date Authentication Failure For User ($PROXY_USERNAME)\n";
+	print LKFD "$ts $date Authentication Failure For User ($FTP_USERNAME)\n";
 	close(LKFD);
 	exit(1);
 }
 
 print STDERR "Success....\n";
-print LKFD "$ts $date Authentication Succeeded For User ($PROXY_USERNAME)\n";
+print LKFD "$ts $date Authentication Succeeded For User ($FTP_USERNAME)\n";
 close(LKFD);
 exit(0);

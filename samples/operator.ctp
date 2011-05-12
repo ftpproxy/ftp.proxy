@@ -18,7 +18,7 @@ function setconfig(line,   n, x) {
 	#
 	if (n == 2) {
 		printf ("-ERR: %s: request denied by configuration: %s/%s\n",
-				program, ENVIRON["PROXY_SERVERLOGIN"], ENVIRON["PROXY_SERVERNAME"]);
+				program, ENVIRON["FTP_USER"], ENVIRON["FTP_SERVER"]);
 		exit (1);		# signal error anyway.
 		}
 
@@ -35,7 +35,7 @@ BEGIN {
 	STDERR = "/dev/stderr";
 
 	argi = 1;
-	if (argi >= ARGV)
+	if (argi >= ARGC)
 		config = "/etc/proxy-user.conf"
 	else {
 		config = ARGV[argi];
@@ -74,8 +74,8 @@ BEGIN {
 		exit (1);
 		}
 
-	username = ENVIRON["PROXY_SERVERLOGIN"];
-	server = ENVIRON["PROXY_SERVERNAME"];
+	username = ENVIRON["FTP_USER"];
+	server = ENVIRON["FTP_SERVER"];
 
 	if ((username SUBSEP server) in rec)
 		setconfig(rec[username, server]);

@@ -1,7 +1,15 @@
 
-VERSION =	1.2.4
-DIR =		ftpproxy-$(VERSION)
-TAR =		ftpproxy-$(VERSION)
+PROGRAM =	ftpproxy
+VERSION =	2.1.0-beta5
+DIR =		$(PROGRAM)-$(VERSION)
+TAR =		$(PROGRAM)-$(VERSION)
+
+DEBRELEASE =    1
+TAR =           $(PROGRAM)-$(VERSION)
+DIR =           $(PROGRAM)-$(VERSION)
+
+INSTALL_PREFIX =
+
 
 export VERSION
 
@@ -13,12 +21,17 @@ all:	$(TARGETS)
 
 
 install:	all
-	cd src; strip $(TARGETS)  &&  cp $(TARGETS) /usr/local/sbin
-	cd doc; cp *.1 /usr/local/man/man1
+	mkdir -p $(INSTALL_PREFIX)/usr/local/sbin
+	mkdir -p $(INSTALL_PREFIX)/usr/local/man/man1
+	cd src; strip $(TARGETS)  &&  cp $(TARGETS) $(INSTALL_PREFIX)/usr/local/sbin
+	cd doc; cp *.1 $(INSTALL_PREFIX)/usr/local/man/man1
 
 
 ftp.proxy:
 	cd src; make ftp.proxy 
+
+debian:		ftp.proxy
+	deb-packager $(PROGRAM) $(VERSION)+$(DEBRELEASE) debian/files.list
 
 
 tar:		clean
@@ -27,5 +40,6 @@ tar:		clean
 	
 clean:
 	cd src; rm -f *.o cut out $(TARGETS)
-	rm -f $(TAR).tgz
+	rm -f $(TAR).tgz *.deb
 	rm -f src/tags
+

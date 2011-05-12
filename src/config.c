@@ -3,7 +3,7 @@
 
     File: ftpproxy/config.c 
 
-    Copyright (C) 2003, 2005  Andreas Schoenberg  <asg@ftpproxy.org> 
+    Copyright (C) 2003, 2009  Andreas Schoenberg  <asg@ftpproxy.org> 
   
     This software is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -45,6 +45,7 @@
 #include <sys/time.h>
 
 #include "ftp.h"
+#include "procinfo.h"
 #include "lib.h"
 
 
@@ -54,8 +55,8 @@ static int get_yesno(char **from, char *par, char *filename, int lineno)
 	char	word[80];
 
 	if (**from == 0) {
-		fprintf (stderr, "%s: missing parameter: %s, %s:%d\n", program, par, filename, lineno);
-		exit (1);
+		printerror(1 | ERR_STDERR | ERR_CONFIG, "-ERR", "missing parameter: %s, %s:%d\n",
+				par, filename, lineno);
 		}
 
 	get_word(from, word, sizeof(word));
@@ -64,9 +65,9 @@ static int get_yesno(char **from, char *par, char *filename, int lineno)
 	else if (strcmp(word, "no") == 0)
 		return (0);
 
-	fprintf (stderr, "%s: bad parameter value: %s, parameter= %s, %s:%d\n", program, word, par, filename, lineno);
-	exit (1);
-	
+	printerror(1 | ERR_STDERR | ERR_CONFIG, "-ERR", "bad parameter value: %s, parameter= %s, %s:%d\n",
+			word, par, filename, lineno);
+
 	return (0);
 }
 
@@ -74,8 +75,8 @@ static char *get_parameter(char **from, char *par, char *value, int size,
 		char *filename, int lineno)
 {
 	if (**from == 0) {
-		fprintf (stderr, "%s: missing parameter: %s, %s:%d\n", program, par, filename, lineno);
-		exit (1);
+		printerror(1 | ERR_STDERR | ERR_CONFIG, "-ERR", "missing parameter: %s, %s:%d\n",
+				par, filename, lineno);
 		}
 
 	copy_string(value, *from, size);
@@ -104,8 +105,8 @@ int readconfig(config_t *config, char *filename, char *section)
 	FILE	*fp;
 
 	if ((fp = fopen(filename, "r")) == NULL) {
-		fprintf (stderr, "%s: can't open configuration file: %s\n", program, filename);
-		exit (1);
+		printerror(1 | ERR_STDERR | ERR_CONFIG, "-ERR", "can't open configuration file: %s\n",
+				filename);
 		}
 
 	sectioncount = 0;
@@ -175,10 +176,31 @@ int readconfig(config_t *config, char *filename, char *section)
 			config->monitor = get_yesno(&p, word, filename, lineno);
 		else if (strcmp(word, "proxy-routing") == 0)
 			config->use_last_at = get_yesno(&p, word, filename, lineno);
-		else if (strcmp(word, "selectserver") == 0) {
+		else if (strcmp(word, "selectserver") == 0  ||  strcmp(word, "select-server") == 0) {
 			config->selectserver = get_yesno(&p, word, filename, lineno);
 			*config->server = 0;
 			}
+
+		else if (strcmp(word, "redirection") == 0) {
+			char	mode[40];
+
+			get_parameter(&p, word, mode, sizeof(mode), filename, lineno);
+			if (strcmp(mode, "none") == 0  ||  strcmp(mode, "off") == 0  ||
+					strcmp(mode, "no") == 0) {
+				config->redirmode = REDIR_NONE;
+				}
+			else if (strcmp(mode, "accept") == 0  ||  strcmp(mode, "redirect") == 0)
+				config->redirmode = REDIR_ACCEPT;
+			else if (strcmp(mode, "forward") == 0)
+				config->redirmode = REDIR_FORWARD;
+			else if (strcmp(mode, "forward-only") == 0)
+				config->redirmode = REDIR_FORWARD_ONLY;
+			else {
+				printerror(1 | ERR_STDERR | ERR_CONFIG, "-ERR", "bad redirection mode: %s, %s:%d\n",
+						mode, filename, lineno);
+				}
+			}
+
 		else if (strcmp(word, "server") == 0) {
 			get_parameter(&p, word, config->server, sizeof(config->server), filename, lineno);
 			config->selectserver = 0;
@@ -201,9 +223,59 @@ int readconfig(config_t *config, char *filename, char *section)
 			}
 		else if (strcmp(word, "xferlog") == 0)
 			get_parameter(&p, word, config->xferlog, sizeof(config->xferlog), filename, lineno);
+
+		else if (strcmp(word, "statdir") == 0) {
+			char	dir[200];
+
+			get_parameter(&p, word, dir, sizeof(dir), filename, lineno);
+			setstatdir(dir);
+			}
+
+		else if (strcmp(word, "facility") == 0) {
+			char	par[20];
+
+			get_parameter(&p, word, par, sizeof(par), filename, lineno);
+			logfacility = getfacility(par);
+			}
+		else if (strcmp(word, "logname") == 0)
+			get_parameter(&p, word, logname, sizeof(logname), filename, lineno);
+
+		else if (strcmp(word, "exithandler") == 0  ||  strcmp(word, "exit-handler") == 0) {
+			char	par[400];
+
+			get_parameter(&p, word, par, sizeof(par), filename, lineno);
+			set_exithandler(par);
+			}
+
+#ifdef FTP_FILECOPY
+		else if (strcmp(word, "fc.basedir") == 0)
+			get_parameter(&p, word, config->cp.basedir, sizeof(config->cp.basedir), filename, lineno);
+		else if (strcmp(word, "fc.subdir") == 0)
+			get_parameter(&p, word, config->cp.subdir, sizeof(config->cp.subdir), filename, lineno);
+		else if (strcmp(word, "fc.create-copies") == 0) {
+			config->cp.createcopies = get_yesno(&p, word, filename, lineno);
+			config->monitor = 1;
+			}
+		else if (strcmp(word, "fc.error-mode") == 0) {
+			char	mode[40];
+
+			get_parameter(&p, word, mode, sizeof(mode), filename, lineno);
+			if (strcmp(mode, "continue") == 0)
+				config->cp.errormode = FCEM_CONTINUE;
+			else if (strcmp(mode, "terminate") == 0)
+				config->cp.errormode = FCEM_TERMINATE;
+			else if (strcmp(mode, "server-error") == 0  ||  strcmp(mode, "error") == 0)
+				config->cp.errormode = FCEM_5XX;
+			else {
+				printerror(1 | ERR_STDERR | ERR_CONFIG, "-ERR", "bad redirection mode: %s, %s:%d\n",
+						mode, filename, lineno);
+				}
+			}
+#endif
+
 		else {
-			fprintf (stderr, "%s: unknown parameter: %s, %s:%d\n", program, word, filename, lineno);
-			exit (1);
+			printerror(1 | ERR_STDERR | ERR_CONFIG, "-ERR", "unknown parameter: %s, %s:%d\n",
+					word, filename, lineno);
 			}
 		}
 		
@@ -222,6 +294,8 @@ int readconfig(config_t *config, char *filename, char *section)
 
 int printconfig(config_t *config)
 {
+	char	*p;
+
 	printf ("debug: %s\n", (debug == 0)? "no": "yes");
 
 	printstring ("acp", config->acp);
@@ -231,12 +305,15 @@ int printconfig(config_t *config)
 	printnum ("bind", bindport);
 	printstring ("ccp", config->ccp);
 	printstring ("ctp", config->ctp);
+	printstring ("exit-handler", get_exithandler());
 	printyesno ("extra-logging", extralog);
 	printyesno ("monitormode", config->monitor);
+	p = getpidfile();  printstring ("pidfile", p);
 	printyesno ("proxy-routing", config->use_last_at);
-	printf ("selectserver: %s\n", (config->selectserver == 0)? "no": "yes");
+	printf ("select-server: %s\n", (config->selectserver == 0)? "no": "yes");
 	printstring ("server", config->server);
 	printstring ("serverlist", config->serverlist);
+	p = getstatdir();  printstring ("statdir", p);
 	printnum ("timeout", config->timeout);
 
 	return (0);

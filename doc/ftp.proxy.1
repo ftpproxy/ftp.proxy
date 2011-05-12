@@ -79,10 +79,27 @@ the gateway machine where \fIftp.proxy\fR is running and to enter the username
 in the form
 .EX \fIremote-user\fR@\fIremote-ftp.server\fR
 The password that is send to the proxy server is the password required
-for logging into \fIremote-ftp-server\fR with the account \fIremote-user\fR.
+for log into \fIremote-ftp-server\fR with the account \fIremote-user\fR.
 .PP
 In situations where the FTP client doesn't support usernames containing
 an `@' the percent sign `%' might be used for that.
+.SS "Session Logging"
+\fIftp.proxy\fR logs to syslog using `ftp' as facility under Linux or BSD
+and `daemon' else, `ftp.proxy' is the logname.
+Both settings can be changed with the \fBfacility\fR and \fBlogname\fR
+configuration option or the \fB-L\fR command line option.
+Log options are only processed globally not after a client connected;
+log options appearing in an interface specific section are ignored.
+.PP
+Each file transfer is logged with the filename, file size in bytes
+and transfer times with `t1' as time
+between FTP transfer command and finish of data transfer and `td' as
+time between connecting the data channel.
+`td' is the best approximation for the data transfer time.
+.br
+In case monitor mode is enabled (\fB-m\fR option) \fIftp.proxy\fR logs the
+file's full pathname on the FTP server and the FTP command parameter
+otherwise.
 .SS "Access Control"
 If an access control program is given with the \fB-a\fR option on the command
 line the connection data is passed to the acp before the server is contacted.
@@ -178,7 +195,7 @@ of `permission denied' responses).
 .PP
 The ccp's stdout and stderr are connected to \fIftp.proxy\fR.
 A one line message written to stdout by the ccp goes to syslog, while
-a message one stderr is sent to the client.
+a message on stderr is sent to the client.
 If this message does not contain a status \fIftp.proxy\fR substitutes a
 `553' code.
 If the message is empty the client gets a simle `553 permission denied'.
@@ -197,7 +214,7 @@ on the server side.
 With this information the file parameter for the commands
 .PP
 .RS
-APPE, CDUP, CWD, DELE, LIST, MDTM, MKD
+APPE, CDUP, CWD, DELE, FEAT, LIST, MDTM, MKD
 .br
 NLST, RETR, RNFR, RNTO, RMD, SIZE, STOR,
 .br
@@ -224,9 +241,81 @@ Monitoring may not work with all server systems since the output of the
 in not completely defined.
 If the directory can not be clearly determined \fIftp.proxy\fR will
 terminate.
+.SS "Filecopy Mode"
+\fIftp.proxy\fR can create copies of all transferred files on the proxy server.
+Files are grouped by date (every day gets its own directory named YYYY/MM/DD)
+under a base directory (\fI/var/tmp\fR by default).
+Filenames have the form
+.PP
+.RS
+\fIdate\fR+\fItime\fR,P\fIpid\fR,N\fIcount\fR,F\fIfilename\fR.data
+.PP
+.RE
+with
+.TP
+\fIdate\fR, \fItime\fR
+current date and time
+.TP
+\fIpid\fR
+ftp.proxy process id
+.TP
+\fIcount\fR
+number of transfered file in that session
+.TP
+\fIfilename\fR
+filename (without path) of the transfered file; characters other than alphanumerics
+and `_', `-', `.' and `+' are %-encoded.
+Each `.data' file contains a single file and is accompanied by a `.info' file
+which stores corresponding session data.
+.PP
+Filecopy mode is activated and configured in the configuration file only; there
+are no command line options.
+For logging purposes filecopy mode switches monitor mode on.
+.br
+Filecopy mode must be compiled into the proxy, run `ftp.proxy -V' to check
+if it is or not.
+.SS "Transparent Redirection"
+Under Linux \fIftp.proxy\fR is able to run as transparent proxy if the \fB-r\fR option
+is set.
+That is if the operating system packet filter redirects TCP sessions ftp.proxy can 
+detect and handle this depending on the redirection mode which is set with the \fB-r\fR
+option.
+Possible modes are
+.TP
+\fBnone\fR, \fBoff\fR
+turns redirection support off.
+.TP
+\fBredirect\fR, \fBaccept\fR
+accepts transparent redirection but does nothing special with it.
+.TP
+\fBforward\fR
+accepts transparent redirection and proxies them to the originally
+requested server.
+.TP
+\fBforward-only\fR
+like \fBforward\fR but rejects all non-redirected connections.
+.PP
+The redirection mode can also be set in the configuration file using
+the \fBredirection\fR option.
+.PP
+An appropriate \fIiptables\fR rule is
+.PP
+.RS
+iptables -t nat -A PREROUTING --protocol TCP \\
+.br
+  --dport 21 \\
+.br
+  -j REDIRECT --to-port 21
+.PP
+.RE
+which redirects all incoming traffic on port 21 to the local port 21.
 .SH "CONFIGURATION FILE"
 \fIftp.proxy\fR can take most of its command line options also from
 a configuration file which can be set with the \fB-f\fR option.
+.PP
+The configuration file can contain comments and blank lines (usual UN*X-style)
+but \fIftp.proxy\fR terminates immediately with an error code if an
+unknown or invalid configuration option is found.
 .PP
 The following options can be set:
 .TP
@@ -257,41 +346,58 @@ sets the path to the connection translation program (\fB-x\fR option).
 \fBdebug\fR yes|no
 turns debugging mode on or off (\fB-d\fR option).
 .TP
-\fImonitormode\fR yes|no
+\fBmonitormode\fR yes|no
 enables monitor mode (\fB-m\fR option).
 .TP
-\fIproxy-routing\fR yes|no
+\fBproxy-routing\fR yes|no
 if enabled \fIftp.proxy\fR uses the last `@' in the username to determine
 to which server it should connect.
 This make proxy hopping (or routing) possible (\fB-u\fR option).
 .TP
-\fIselectserver\fR yes|no
+\fBselectserver\fR yes|no
 enables client side server selection, disables the \fBserver\fR option
 (\fB-e\fR option).
 .TP
-\fIserver\fR \fIftpserver\fR
+\fBserver\fR \fIftpserver\fR
 sets the connection's FTP server, disables \fBselectserver\fR.
 .TP
-\fIserverlist\fR \fIlist-of-allowed-server\fR
+\fBserverlist\fR \fIlist-of-allowed-server\fR
 specifies a command separated list of servers to which the clients are
 allowed to connect (\fB-s\fR option).
 .TP
-\fIserverdelimiter\fR \fIcharset\fR
+\fBserverdelimiter\fR \fIcharset\fR
 define charset for the username/server delimeter, default is `@'.
 .TP
-\fIsourceip\fR \fIip-number\fR
+\fBsourceip\fR \fIip-number\fR
 defines the IP address for the outgoing control connection to the remote
 server, which also determines the local IP address for data transmissions.
 .TP
-\fItimeout\fR \fItimeout\fR
+\fBtimeout\fR \fItimeout\fR
 set the timeout in seconds.
 .TP
-\fIxferlog\fR \fIfilename\fR
+\fBxferlog\fR \fIfilename\fR
 sets the location of the xferlog file and enables xferlog logging.
 .PP
-Notice that the file can contain comments and blank lines (usual UN*X-style)
-but \fIftp.proxy\fR terminates immediately with an error code if an
-unknown or invalid configuration option is found.
+.SS "Filecopy Configuration"
+The following options configure \fIftp.proxy\fR's filecopy mode.
+They are only valid if \fIftp.proxy\fR is compiled with filecopy
+support (run `ftp.proxy -V').
+.TP
+\fBfc.basedir\fR \fIdirectory\fR
+the full path to the directory under which the file copies are stored,
+the default is \fI/var/tmp\fR.
+.TP
+\fBfc.create-copies\fR yes|no
+activate creation of file copyies or not.
+.TP
+\fBfc.error-mode\fR continue|terminate|server-error
+sets the proxy behaviour in case the copy- of infofile cannot be created.
+In case of `continue' the proxy does nothing special, `terminate' terminates
+the current proxy session and `server-error' sends "500 server error" to
+the client.
+The `server-error' mode works only properly if the error is detected directly
+after the FTP transfer command before it is acknowledged to the client.
+.PP
 .SS "Interface specific configurations"
 \fIftp.proxy\fR's configuration file supports interface specific configuration
 sections.
@@ -374,6 +480,9 @@ With this option the \fIserver\fR argument isn't accepted.
 \fB-l\fR
 sets logging of most of the FTP commands.
 .TP
+\fB-L\fR \fIfacility\fR[,\fIlogname\fR]
+sets syslog facility and name.
+.TP
 \fB-m\fR
 sets the monitor mode.
 .TP
@@ -397,23 +506,28 @@ specify a different FTP timeout in seconds than the default of 900 (15 minutes).
 search for the last appearance of an '@' in the username. This allows the
 use of usernames with a '@' in it. Be careful with this option, this can be
 abused to do 'proxy hopping'!
+.br
+In case server selection is not enabled \fB-u\fR allows
+`user@hostname' style usernames.
 .TP
 \fB-v\fR \fIprefix\fR
 set \fIprefix\fR as variable prefix for the variable passwd to the access
 and command control program.
+The default value is \fBFTP_\fR.
+.TP
+\fB-V\fR
+show version number
 .TP
 \fB-x\fR \fIctp\fR
 set a connection translation program to overwrite the server and login
 information supplied by the user.
 .TP
 \fB-X\fR \fIfile\fR
-write xferlog loggin to \fIfile\fR.
-.TP
-\fB-V\fR
-show version number
+write xferlog logging to \fIfile\fR.
 .TP
 \fB-y\fR
-allow any data ports on any remote interfaces (dangerous!).
+allow any data ports on any remote interfaces, required to make \fIftp.proxy\fR
+support FXP-mode.
 .TP
 \fb-z\fR \fIsize\fR
 sets the amount of data in bytes ftp.proxy tries to read with one system call

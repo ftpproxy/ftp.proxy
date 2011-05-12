@@ -3,8 +3,8 @@
 
     File: ftpproxy/ip-lib.h
 
-    Copyright (C) 1999  Wolfgang Zekoll  <wzk@quietsche-entchen.de>
-    Copyright (C) 2000, 2003  Andreas Schoenberg  <asg@ftpproxy.org>
+    Copyright (C) 1999,2005  Wolfgang Zekoll  <wzk@quietsche-entchen.de>
+    Copyright (C) 2000 - 2006  Andreas Schoenberg  <asg@ftpproxy.org>
   
     This software is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -27,6 +27,13 @@
 
 extern char *program;
 
+typedef struct _peer {
+	char        name[80];
+	char        ipnum[40];
+	unsigned int port;
+	} peer_t;
+
+unsigned int get_interface_info(int pfd, peer_t *sock);
 
 int openip(char *server, unsigned int port, char *srcip, unsigned int srcport);
 
