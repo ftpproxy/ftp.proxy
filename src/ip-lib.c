@@ -72,7 +72,7 @@ int openip(char *host, unsigned int port, char *srcip, unsigned int srcport)
 {
 	int	socketd;
 	struct sockaddr_in server;
-	struct hostent *hostp, *gethostbyname();
+	struct hostent *hostp;
 
 	socketd = socket(AF_INET, SOCK_STREAM, 0);
 	if (socketd < 0)
@@ -82,45 +82,36 @@ int openip(char *host, unsigned int port, char *srcip, unsigned int srcport)
 	 * Enhancement to use a particular local interface and source port,
 	 * mentioned by Juergen Ilse, <ilse@asys-h.de>.
 	 */
-
-  	if (srcip != NULL  &&  *srcip != 0) {
+	if (srcip != NULL  &&  *srcip != 0)
+	{
 		struct sockaddr_in laddr;
 
 		if (srcport != 0) {
 			int	one;
-
 			one = 1;
 	 		setsockopt (socketd, SOL_SOCKET, SO_REUSEADDR, (int *) &one, sizeof(one));
-			}
+		}
  
- 		/*
-         	 * Bind local socket to srcport and srcip
-         	 */
+ 		/* Bind local socket to srcport and srcip */
 
  		memset(&laddr, 0, sizeof(laddr));
  		laddr.sin_family = AF_INET;
  		laddr.sin_port   = htons(srcport);
 
- 		if (srcip == NULL  ||  *srcip == 0)
- 			srcip = "0.0.0.0";	/* Can't happen but who cares. */
- 		else {
- 			struct hostent *ifp;
+		struct hostent *ifp;
  
- 			ifp = gethostbyname(srcip);
- 			if (ifp == NULL) {
- 				printerror(1 | ERR_SYSTEM, "-ERR", "can't lookup %s", srcip);
- 				exit (1);
- 				}
- 
- 			memcpy(&laddr.sin_addr, ifp->h_addr, ifp->h_length);
- 	 	 	}
- 
- 		if (bind(socketd, (struct sockaddr *) &laddr, sizeof(laddr))) {
- 			printerror(1 | ERR_SYSTEM, "-ERR", "can't bind to %s:%u", srcip, ntohs(laddr.sin_port));
- 	    		exit (1);
- 	  		}
+		ifp = gethostbyname(srcip);
+		if (ifp == NULL) {
+			printerror(1 | ERR_SYSTEM, "-ERR", "can't lookup %s", srcip);
+			exit (1);
 		}
-
+		memcpy(&laddr.sin_addr, ifp->h_addr, ifp->h_length);
+ 
+		if (bind(socketd, (struct sockaddr *) &laddr, sizeof(laddr))) {
+			printerror(1 | ERR_SYSTEM, "-ERR", "can't bind to %s:%u", srcip, ntohs(laddr.sin_port));
+			exit (1);
+		}
+	}
 
 	server.sin_family = AF_INET;
 	hostp = gethostbyname(host);
@@ -139,7 +130,7 @@ int openip(char *host, unsigned int port, char *srcip, unsigned int srcport)
 	signal(SIGALRM, SIG_DFL);
 	
  	return (socketd);
-}	
+}
 
 unsigned int getportnum(char *name)
 {
@@ -153,14 +144,14 @@ unsigned int getportnum(char *name)
 		if (portdesc == NULL) {
 			printerror(1 | ERR_SYSTEM, "-ERR", "service not found: %s", name);
 			exit (1);
-			}
+		}
 
 		port = ntohs(portdesc->s_port);
 		if (port == 0) {
 			printerror(1 | ERR_SYSTEM, "-ERR", "port error: %s\n", name);
 			exit (1);
-			}
 		}
+	}
 	
 	return (port);
 }
@@ -187,14 +178,11 @@ int bind_to_port(char *interface, unsigned int port)
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 		printerror(1 | ERR_SYSTEM, "-ERR", "can't create socket: %s", strerror(errno));
 		exit (1);
-		}
+	} 
 	else {
-		int	opt;
-
-		opt = 1;
+		int	opt = 1;
 		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-		}
-
+	}
 
 	memset(&saddr, 0, sizeof(saddr));
 	saddr.sin_family = AF_INET;
@@ -209,22 +197,19 @@ int bind_to_port(char *interface, unsigned int port)
 		if (ifp == NULL) {
 			printerror(1 | ERR_SYSTEM, "-ERR", "can't lookup %s", interface);
 			exit (1);
-			}
-
-		memcpy(&saddr.sin_addr, ifp->h_addr, ifp->h_length);
 		}
-		
-		
+		memcpy(&saddr.sin_addr, ifp->h_addr, ifp->h_length);
+	}
+
 	if (bind(sock, (struct sockaddr *) &saddr, sizeof(saddr))) {
 		printerror(1 | ERR_SYSTEM, "-ERR", "can't bind to %s:%u", interface, port);
 		exit (1);
-		}
-		
-		
+	}
+
 	if (listen(sock, 5) < 0) {
 		printerror(1 | ERR_SYSTEM, "-ERR", "listen error: %s", strerror(errno));
 		exit (1);
-		}
+	}
 
 	return (sock);
 }
