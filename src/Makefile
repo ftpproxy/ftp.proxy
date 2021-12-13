@@ -27,7 +27,7 @@ TARGETS =	ftp.proxy
 
 
 all:		$(TARGETS)
-	-ctags *.[ch]
+#	-ctags *.[ch]
 
 ftp.proxy:	$(FTPPROXY)
 	$(CC) -o $@ $(FTPPROXY) ${OSLIB}
