@@ -124,12 +124,7 @@ int get_client_info(ftp_t *x, int pfd)
 {
 	unsigned int size;
 	struct sockaddr_in saddr;
-#ifdef USE_GETADDRINFO
 	int ret;
-#else
-	struct hostent *hostp = NULL;
-	struct in_addr *addr;
-#endif
 	*x->client.name = 0;
 	size = sizeof(saddr);
 	if (getpeername(pfd, (struct sockaddr *) &saddr, &size) < 0 )
@@ -140,19 +135,12 @@ int get_client_info(ftp_t *x, int pfd)
 	if (x->config->numeric_only == 1)
 		copy_string(x->client.name, x->client.ipnum, sizeof(x->client.name));
 	else {
-#ifdef USE_GETADDRINFO
 		ret = getnameinfo ((struct sockaddr*) &saddr, sizeof(saddr),
 		                   x->client.name, sizeof(x->client.name), NULL, 0, 0);
 		if (ret != 0) {
 			*(x->client.name) = 0; // error, make sure string is empty
 		}
-#else
-		addr = &saddr.sin_addr;
-		hostp = gethostbyaddr((char *) addr,
-				sizeof (saddr.sin_addr.s_addr), AF_INET);
-		copy_string(x->client.name, hostp == NULL? x->client.ipnum: hostp->h_name, sizeof(x->client.name));
-#endif
-		}
+	}
 
 	strlwr(x->client.name);
 
@@ -1364,11 +1352,7 @@ int dologin(ftp_t *x)
 {
 	int	c, i, rc, isredirected;
 	char	*p, word[80], line[300];
-#ifdef USE_GETADDRINFO
 	struct addrinfo *hostp;
-#else
-	struct hostent *hostp;
-#endif
 	struct sockaddr_in saddr;
 			
 	while (1) {
@@ -1542,22 +1526,14 @@ int dologin(ftp_t *x)
 	 * Get port and IP number of server.
 	 */
 	x->server.port = get_port(x->server.name, 21);
-#ifdef USE_GETADDRINFO
 	hostp = lookup_host (x->server.name, NULL, x->server.port);
-#else
-	hostp = gethostbyname(x->server.name);
-#endif
 	if (hostp == NULL) {
 		cfputs(x, "500 service unavailable");
 		printerror(1 | ERR_PROXY, "-ERR", "can't resolve hostname: %s", x->server.name);
 		exit (1);
 		}
-#ifdef USE_GETADDRINFO
 	memcpy (&saddr, hostp->ai_addr, hostp->ai_addrlen);
 	freeaddrinfo (hostp);
-#else
-	memcpy(&saddr.sin_addr, hostp->h_addr, hostp->h_length);
-#endif
 	copy_string(x->server.ipnum, inet_ntoa(saddr.sin_addr), sizeof(x->server.ipnum));
 
 	/*

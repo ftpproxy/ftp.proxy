@@ -25,8 +25,6 @@
 #ifndef _IP_LIB_INCLUDED
 #define	_IP_LIB_INCLUDED
 
-#define USE_GETADDRINFO 1
-
 extern char *program;
 
 typedef struct _peer {
@@ -44,8 +42,6 @@ unsigned int get_port(char *server, unsigned int def_port);
 
 int bind_to_port(char *interface, unsigned int port);
 int accept_loop(int sock);
-#ifdef USE_GETADDRINFO
 struct addrinfo * lookup_host (char * host, char * service, unsigned int port);
-#endif
 
 #endif
