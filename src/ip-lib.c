@@ -44,6 +44,31 @@
 #include "lib.h"
 #include "ip-lib.h"
 
+#ifdef USE_GETADDRINFO
+struct addrinfo * lookup_host (char * host, char * service, unsigned int port)
+{
+	struct addrinfo hints;
+	struct addrinfo *hostp;
+	char port_s[10];
+
+	memset (&hints, 0, sizeof(hints));
+	hints.ai_flags    = AI_CANONNAME;
+	hints.ai_family   = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+
+    if (port || (!service || !*service))
+		snprintf (port_s, sizeof(port_s), "%u", port);
+	else
+		snprintf (port_s, sizeof(port_s), "%s", service);
+
+	if (getaddrinfo (host, port_s, &hints, &hostp) != 0) {
+		return NULL;
+	}
+
+	return hostp;
+}
+#endif
+
 
 unsigned int get_interface_info(int pfd, peer_t *sock)
 {
@@ -71,8 +96,13 @@ static void alarm_handler()
 int openip(char *host, unsigned int port, char *srcip, unsigned int srcport)
 {
 	int	socketd;
+#ifdef USE_GETADDRINFO
+	struct addrinfo *hostp;
+#else
 	struct sockaddr_in server;
+	struct sockaddr_in laddr;
 	struct hostent *hostp;
+#endif
 
 	socketd = socket(AF_INET, SOCK_STREAM, 0);
 	if (socketd < 0)
@@ -84,8 +114,6 @@ int openip(char *host, unsigned int port, char *srcip, unsigned int srcport)
 	 */
 	if (srcip != NULL  &&  *srcip != 0)
 	{
-		struct sockaddr_in laddr;
-
 		if (srcport != 0) {
 			int	one;
 			one = 1;
@@ -93,38 +121,63 @@ int openip(char *host, unsigned int port, char *srcip, unsigned int srcport)
 		}
  
  		/* Bind local socket to srcport and srcip */
-
- 		memset(&laddr, 0, sizeof(laddr));
+#ifdef USE_GETADDRINFO
+		hostp = lookup_host (srcip, NULL, srcport);
+		if (!hostp) {
+#else
+		memset(&laddr, 0, sizeof(laddr));
  		laddr.sin_family = AF_INET;
  		laddr.sin_port   = htons(srcport);
-
 		struct hostent *ifp;
- 
 		ifp = gethostbyname(srcip);
 		if (ifp == NULL) {
+#endif
 			printerror(1 | ERR_SYSTEM, "-ERR", "can't lookup %s", srcip);
 			exit (1);
 		}
+
+#ifdef USE_GETADDRINFO
+		if (bind(socketd, hostp->ai_addr, hostp->ai_addrlen)) {
+			printerror(1 | ERR_SYSTEM, "-ERR", "can't bind to %s:%u", srcip, srcport);
+			freeaddrinfo (hostp);
+			exit (1);
+		}
+		freeaddrinfo (hostp);
+#else
 		memcpy(&laddr.sin_addr, ifp->h_addr, ifp->h_length);
- 
 		if (bind(socketd, (struct sockaddr *) &laddr, sizeof(laddr))) {
 			printerror(1 | ERR_SYSTEM, "-ERR", "can't bind to %s:%u", srcip, ntohs(laddr.sin_port));
 			exit (1);
 		}
+#endif
 	}
 
+#ifdef USE_GETADDRINFO
+	hostp = lookup_host (host, NULL, port);
+	if (!hostp)
+		return -1;
+#else
 	server.sin_family = AF_INET;
 	hostp = gethostbyname(host);
 	if (hostp == NULL)
 		return (-1);
-  
 	memcpy(&server.sin_addr, hostp->h_addr, hostp->h_length);
 	server.sin_port = htons(port);
+#endif
 
 	signal(SIGALRM, alarm_handler);
 	alarm(10);
+
+#ifdef USE_GETADDRINFO
+	if (connect(socketd, hostp->ai_addr, hostp->ai_addrlen) < 0) {
+		freeaddrinfo (hostp);
+		return -1;
+	}
+	freeaddrinfo (hostp);
+#else
 	if (connect(socketd, (struct sockaddr *) &server, sizeof(server)) < 0)
 		return (-1);
+#endif
 
 	alarm(0);
 	signal(SIGALRM, SIG_DFL);
@@ -174,6 +227,11 @@ int bind_to_port(char *interface, unsigned int port)
 {
 	struct sockaddr_in saddr;
 	int	sock;
+#ifdef USE_GETADDRINFO
+	struct addrinfo * ifp;
+#else
+	struct hostent *ifp;
+#endif
 
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 		printerror(1 | ERR_SYSTEM, "-ERR", "can't create socket: %s", strerror(errno));
@@ -191,14 +249,21 @@ int bind_to_port(char *interface, unsigned int port)
 	if (interface == NULL  ||  *interface == 0)
 		interface = "0.0.0.0";
 	else {
-		struct hostent *ifp;
-
+#ifdef USE_GETADDRINFO
+		ifp = lookup_host (interface, NULL, port);
+#else
 		ifp = gethostbyname(interface);
+#endif
 		if (ifp == NULL) {
 			printerror(1 | ERR_SYSTEM, "-ERR", "can't lookup %s", interface);
 			exit (1);
 		}
-		memcpy(&saddr.sin_addr, ifp->h_addr, ifp->h_length);
+#ifdef USE_GETADDRINFO
+		memcpy (&saddr, ifp->ai_addr, ifp->ai_addrlen);
+		freeaddrinfo (ifp);
+#else
+		memcpy (&saddr.sin_addr, ifp->h_addr, ifp->h_length);
+#endif
 	}
 
 	if (bind(sock, (struct sockaddr *) &saddr, sizeof(saddr))) {
