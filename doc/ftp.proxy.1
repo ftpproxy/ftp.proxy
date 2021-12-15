@@ -21,7 +21,7 @@ ftp.proxy \- FTP proxy server
 .SH DESCRIPTION
 .I ftp.proxy
 is a proxy server for a subset of the file tranfer protocol described in
-RFC 959.
+RFC 959, it also implements RFC 2428.
 It forwards traffic between a client and a \fIserver\fR without looking too much
 if both hosts do real FTP.
 The FTP server can be either given on the command line or supplied by the
@@ -41,7 +41,7 @@ supports the following FTP commands:
 .RS
 ABOR, ACCT, APPE, CDUP, CWD, DELE, FEAT, LIST,
 .br
-MDTM, MKD, MODE, NLIST, NOOP, PASS, PASV, PORT,
+MDTM, MKD, MODE, NLIST, NOOP, PASS, PASV, PORT, EPSV, EPRT,
 .br
 PWD, QUIT, RETR, REST, RNFR, RNTO, RMD, SITE,
 .br

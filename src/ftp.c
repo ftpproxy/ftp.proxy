@@ -57,10 +57,12 @@
 #endif
 
 typedef struct _ftpcmd {
-    char	name[20];
-    int		par, ispath, useccp;
-    int		resp;
-    int		log;
+    char name[20];
+    int par;    // parameter
+    int ispath; //
+    int useccp; //
+    int resp;
+    int log;
     } ftpcmd_t;
 
 ftpcmd_t cmdtab[] = {
@@ -106,7 +108,9 @@ ftpcmd_t cmdtab[] = {
     { "LIST", 1, 1, 1,	0, 0 },
     { "NLST", 1, 1, 1,	0, 0 },
     { "PORT", 1, 0, 0,	0, /* 200, */ 0 },
+    { "EPRT", 1, 0, 0,	0, /* 200, */ 1 }, /* RFC2428 */
     { "PASV", 0, 0, 0,	0, /* 200, */ 0 },
+    { "EPSV", 0, 0, 0,	0, /* 200, */ 1 }, /* RFC2428 */
     { "ALLO", 1, 0, 0,	0, /* 200, */ 0 },
     { "RETR", 1, 1, 1,	0, 0 },
     { "STOR", 1, 1, 1,	0, 0 },
@@ -670,7 +674,7 @@ int doquit(ftp_t *x)
 }
 
 
-char *_getipnum(char *line, char **here, char *ip, int size)
+char * pasv_getipnum(char *line, char **here, char *ip, int size)
 {
 	int	c, i, k;
 
@@ -695,7 +699,7 @@ char *_getipnum(char *line, char **here, char *ip, int size)
 	return (ip);
 }
 
-unsigned long _getport(char *line, char **here)
+unsigned long pasv_getport(char *line, char **here)
 {
 	unsigned long port;
 	char	*p;
@@ -713,15 +717,34 @@ unsigned long _getport(char *line, char **here)
 	return (port);
 }
 
-int doport(ftp_t *x, char *command, char *par)
+
+int doport(ftp_t *x, char *command, char *par, int USE_EPRT)
 {
 	int	c, rc;
-	char	*p, line[200];
-	dtc_t	*ch;
+	char *p, line[200];
+	dtc_t *ch = &x->ch;
 
-	ch = &x->ch;
-	_getipnum(par, &p, ch->client.ipnum, sizeof(ch->client.ipnum));
-	ch->client.port = _getport(p, &p);
+	if (USE_EPRT) {
+		// EPRT |1|127.0.0.1|58377|
+		// only want the port |58377|, will connect to the stored client IP
+		p = strrchr (par, '|');
+		if (p) {
+			*p = 0;
+			p = strrchr (par, '|');
+			if (p) {
+				p++;
+				ch->client.port = atoi (p);
+			}
+		}
+		if (!p) {
+			cfputs(x, "500 not accepted");
+			return (0);
+		}
+		copy_string (ch->client.ipnum, x->client.ipnum, sizeof(ch->client.ipnum));
+	} else {
+		pasv_getipnum(par, &p, ch->client.ipnum, sizeof(ch->client.ipnum));
+		ch->client.port = pasv_getport(p, &p);
+	}
 	if (debug != 0)
 		fprintf (stderr, "client listens on %s:%u\n", ch->client.ipnum, ch->client.port);
 
@@ -731,15 +754,19 @@ int doport(ftp_t *x, char *command, char *par)
 	if (debug != 0)
 		fprintf (stderr, "listening on %s:%u\n", ch->outside.ipnum, ch->outside.port);
 
-	copy_string(line, ch->outside.ipnum, sizeof(line));
-	for (p=line; (c = *p) != 0; p++) {
-		if (c == '.')
-			*p = ',';
-		}
-
-	*p++ = ',';
-	snprintf (p, 20, "%u,%u", ch->outside.port >> 8, ch->outside.port & 0xFF);
-
+	if (USE_EPRT) {
+		// EPRT |X|ipstr|port|
+		snprintf (line, sizeof(line), "|%c|%s|%d|", use_ipv6 ? '2' : '1',
+		                              ch->outside.ipnum, ch->outside.port);
+	} else {
+		copy_string(line, ch->outside.ipnum, sizeof(line));
+		for (p=line; (c = *p) != 0; p++) {
+			if (c == '.')
+				*p = ',';
+			}
+		*p++ = ',';
+		snprintf (p, 20, "%u,%u", ch->outside.port >> 8, ch->outside.port & 0xFF);
+	}
 
 	/* Open port first */		
 	ch->isock     = -1;
@@ -747,7 +774,11 @@ int doport(ftp_t *x, char *command, char *par)
 	ch->state     = PORT_LISTEN;
 
 	/* then send PORT cmd */
-	rc = sfputc(x, "PORT", line, line, sizeof(line), &p);
+	if (USE_EPRT) {
+		rc = sfputc(x, "EPRT", line, line, sizeof(line), &p);
+	} else {
+		rc = sfputc(x, "PORT", line, line, sizeof(line), &p);
+	}
 
 	/* check return code */
 	if (rc != 200){
@@ -761,69 +792,84 @@ int doport(ftp_t *x, char *command, char *par)
 	return (rc);
 }
 
-int dopasv(ftp_t *x, char *command, char *par)
+
+int dopasv(ftp_t *x, char *command, char *par, int USE_EPSV)
 {
-	int	c, k, rc;
+	int	c, k, rc, resp, invalid_response = 0;
 	char	*p, line[200];
 	dtc_t	*ch;
 
 	ch = &x->ch;
-	rc = sfputc(x, "PASV", "", line, sizeof(line), &p);
-	if (rc != 227) {
+	if (USE_EPSV) {
+		rc = sfputc (x, "EPSV", "", line, sizeof(line), &p);
+	} else {
+		rc = sfputc (x, "PASV", "", line, sizeof(line), &p);
+	}
+	if (rc != 227 && rc != 229) {
 		cfputs(x, "500 not accepted");
 		return (0);
+	}
+
+	if (USE_EPSV) {
+		// need only port number
+		// 229 Entering Extended Passive Mode (|||65113|)
+		resp = -1;
+		p = strchr (line + 4, '(');
+		if (p) {
+			resp = sscanf (p + 1, "|||%u|", &(ch->server.port));
 		}
-
-
-	/*
-	 * Ende der Port-Koordinaten im Server-Response suchen.
-	 */
-
-	k = strlen(line);
-	while (k > 0  &&  isdigit(line[k-1]) == 0)
-		k--;
-
-	if (isdigit(line[k-1])) {
-		line[k--] = 0;
-		while (k > 0  &&  (isdigit(line[k-1])  ||  line[k-1] == ','))
+		if (!p || resp != 1) {
+			invalid_response = 1;
+		} else {
+			copy_string (ch->server.ipnum, x->server.ipnum, sizeof(ch->server.ipnum));
+		}
+	} else {
+		// PASV
+		/* Ende der Port-Koordinaten im Server-Response suchen. */
+		k = strlen(line);
+		while (k > 0  &&  isdigit(line[k-1]) == 0) {
 			k--;
 		}
+		if (isdigit(line[k-1])) {
+			line[k--] = 0;
+			while (k > 0  &&  (isdigit(line[k-1])  ||  line[k-1] == ','))
+				k--;
+			}
+		/* line[k] sollte jetzt auf die erste Ziffer des PASV Response * zeigen. */
+		if (isdigit(line[k]) == 0) {
+			invalid_response = 1;
+		} else {
+			/* Auslesen der PASV IP-Nummer und des Ports. */
+			p = &line[k];
+			pasv_getipnum(p, &p, ch->server.ipnum, sizeof(ch->server.ipnum));
+			ch->server.port = pasv_getport(p, &p);
+		}
+	}
 
-	/*
-	 * line[k] sollte jetzt auf die erste Ziffer des PASV Response
-	 * zeigen.
-	 */
-
-	if (isdigit(line[k]) == 0) {
+	if (invalid_response) {
 		printerror(0, "", "can't locate passive response: %s", line);
 		cfputs(x, "500 not accepted");
 		return (0);
-		}
+	}
 
-	/*
-	 * Auslesen der PASV IP-Nummer und des Ports.
-	 */
-
-	p = &line[k];
-	_getipnum(p, &p, ch->server.ipnum, sizeof(ch->server.ipnum));
-	ch->server.port = _getport(p, &p);
-	if (debug != 0)
+	if (debug != 0) {
 		fprintf (stderr, "server listens on %s:%u\n", ch->server.ipnum, ch->server.port);
-
+	}
 	get_interface_info(0, &ch->inside);
 	ch->isock = bind_to_port(ch->inside.ipnum, 0);
 	ch->inside.port = get_interface_info(ch->isock, &ch->inside);
 	if (debug != 0)
 		fprintf (stderr, "listening on %s:%u\n", ch->inside.ipnum, ch->inside.port);
 
-	snprintf (line, sizeof(line) - 2, "227 Entering Passive Mode (%s,%u,%u)",
-			ch->inside.ipnum,
-			ch->inside.port >> 8, ch->inside.port & 0xFF);
-	for (p=line; (c = *p) != 0; p++) {
-		if (c == '.')
-			*p = ',';
+	if (USE_EPSV) {
+		snprintf (line, sizeof(line) - 2, "229 Entering Extended Passive Mode (|||%u|)", ch->inside.port);
+	} else { // PASV
+		snprintf (line, sizeof(line) - 2, "227 Entering Passive Mode (%s,%u,%u)",
+		          ch->inside.ipnum, ch->inside.port >> 8, ch->inside.port & 0xFF);
+		for (p=line; (c = *p) != 0; p++) {
+			if (c == '.') *p = ',';
 		}
-
+	}
 	cfputs(x, line);
 	ch->osock = -1;
 	ch->mode  = MODE_PASSIVE;
@@ -844,7 +890,7 @@ int dofeat(ftp_t *x)
 
 	int	rc;
 	char	*p, word[80], serverfeature[80], line[300];
-	static char *proxyfeatlist = "SIZE:MDTM";
+	static char *proxyfeatlist = "SIZE:MDTM:EPSV:EPRT";
 
 	sfputs(x, "%s", "FEAT");
 	if (sfgets(x, line, sizeof(line)) == NULL) {
@@ -1896,7 +1942,9 @@ int proxy_request(config_t *config)
 
 		socksize = w_sockaddr_get_size (sock);
 
-		rc = getsockopt(0, SOL_IP, SO_ORIGINAL_DST, sock, &socksize);
+		rc = getsockopt(0, use_ipv6 ? SOL_IPV6 : SOL_IP,
+		                SO_ORIGINAL_DST, // IP6T_SO_ORIGINAL_DST has the same value
+		                sock, &socksize);
 
 		w_sockaddr_get_ip_str (sock, ipstr, sizeof(ipstr));
 		sport = w_sockaddr_get_port (sock);
@@ -2100,11 +2148,15 @@ int proxy_request(config_t *config)
 			break;
 			}
 		else if (strcmp(command, "PORT") == 0)
-			doport(x, command, parameter);
+			doport(x, command, parameter, 0);
+		else if (strcmp(command, "EPRT") == 0)
+			doport(x, command, parameter, 1);
 		else if (strcmp(command, "FEAT") == 0)
 			dofeat(x);
 		else if (strcmp(command, "PASV") == 0)
-			dopasv(x, command, parameter);
+			dopasv(x, command, parameter, 0);
+		else if (strcmp(command, "EPSV") == 0)
+			dopasv(x, command, parameter, 1);
 		else if (strcmp(command, "LIST") == 0  ||  strcmp(command, "NLST") == 0) {
 			x->ch.operation = OP_GET;	/* fuer PASV mode */
 			rc = sfputc(x, command, parameter, line, sizeof(line), NULL);
