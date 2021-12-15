@@ -26,12 +26,22 @@
 #define	_IP_LIB_INCLUDED
 
 extern char *program;
+extern int use_ipv6;
 
 typedef struct _peer {
-	char        name[80];
-	char        ipnum[40];
+	char        name[100];
+	char        ipnum[64];
 	unsigned int port;
 	} peer_t;
+
+struct sockaddr * w_sockaddr_new (int ipv6); // must be freed with free()
+int  w_sockaddr_get_port   (struct sockaddr * saddr);
+void w_sockaddr_get_ip_str (struct sockaddr * saddr, char * outbuf, int size);
+void * w_sockaddr_get_addr (struct sockaddr * saddr);
+socklen_t w_sockaddr_get_size (struct sockaddr * saddr);
+void w_sockaddr_reset (struct sockaddr * saddr);
+void w_sockaddr_set_port (struct sockaddr * saddr, int port);
+int w_sockaddr_set_ip_from_str (struct sockaddr * saddr, const char * ipstr);
 
 unsigned int get_interface_info(int pfd, peer_t *sock);
 

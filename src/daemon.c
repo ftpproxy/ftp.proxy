@@ -48,12 +48,11 @@
 #include "ip-lib.h"
 #include "lib.h"
 
-
 int acceptloop(int sock)
 {
 	unsigned int len;
 	int	connect, pid;
-	struct sockaddr_in client;
+	struct sockaddr * client;
 
 	/*
 	 * Go into background.
@@ -65,6 +64,8 @@ int acceptloop(int sock)
 	else if ((pid = fork()) > 0)
 		exit (0);
 
+	client = w_sockaddr_new (use_ipv6);
+
 	fprintf (stderr, "\nstarting ftp.proxy %s in daemon mode ...\n", VERSION);
 	while (1) {
 
@@ -72,8 +73,9 @@ int acceptloop(int sock)
 		 * hier kommt ein accept an
 		 */
 
-		len = sizeof(client);
-		if ((connect = accept(sock, (struct sockaddr *) &client, &len)) < 0) {
+		len = w_sockaddr_get_size (client);
+		connect = accept (sock, client, &len);
+		if (connect < 0) {
 			if (errno == EINTR  ||  errno == ECONNABORTED)
 				continue;
 
@@ -83,6 +85,7 @@ int acceptloop(int sock)
 
 		if ((pid = fork()) < 0) {
 			fprintf (stderr, "%04X: can't fork process: %s\n", getpid(), strerror(errno));
+			free (client);
 			exit (1);
 			}
 		else if (pid == 0) {
@@ -101,6 +104,7 @@ int acceptloop(int sock)
 			close (connect);
 			close (sock);
 
+			free (client);
 			return (0);
 			}
 
@@ -114,6 +118,7 @@ int acceptloop(int sock)
 	close (1);
 	fprintf (stderr, "%04X: terminating\n", getpid());
 
+	free (client);
 	exit (0);
 }
 

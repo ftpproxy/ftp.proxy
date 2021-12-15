@@ -44,15 +44,119 @@
 #include "lib.h"
 #include "ip-lib.h"
 
+int use_ipv6 = 0;
+
+// =============================================================================
+
+struct sockaddr * w_sockaddr_new (int ipv6) // must be freed with free()
+{
+    struct sockaddr * saddr;
+    if (ipv6) {
+        saddr = calloc (1, sizeof(struct sockaddr_in6));
+        saddr->sa_family = AF_INET6;
+    } else {
+        saddr = calloc (1, sizeof(struct sockaddr_in));
+        saddr->sa_family = AF_INET;
+    }
+    return saddr;
+}
+
+
+int w_sockaddr_get_port (struct sockaddr * saddr)
+{
+    unsigned short sin_port;
+    if (saddr->sa_family == AF_INET) {
+        sin_port = (((struct sockaddr_in*)saddr)->sin_port);
+    } else { /* ipv6 */
+        sin_port = (((struct sockaddr_in6*)saddr)->sin6_port);
+    }
+    return (ntohs (sin_port));
+}
+
+
+void w_sockaddr_get_ip_str (struct sockaddr * saddr, char * outbuf, int size)
+{
+    void * sin_addr;
+    *outbuf = 0;
+    if (saddr->sa_family == AF_INET) {
+        sin_addr = &(((struct sockaddr_in*)saddr)->sin_addr);
+    } else { /* ipv6 */
+        sin_addr = &(((struct sockaddr_in6*)saddr)->sin6_addr);
+    }
+    inet_ntop (saddr->sa_family, sin_addr, outbuf, size);
+}
+
+
+void * w_sockaddr_get_addr (struct sockaddr * saddr)
+{
+    void * sin_addr;
+    if (saddr->sa_family == AF_INET) {
+        sin_addr = &(((struct sockaddr_in*)saddr)->sin_addr);
+    } else { /* ipv6 */
+        sin_addr = &(((struct sockaddr_in6*)saddr)->sin6_addr);
+    }
+    return sin_addr;
+}
+
+
+socklen_t w_sockaddr_get_size (struct sockaddr * saddr)
+{
+    if (saddr->sa_family == AF_INET) {
+        return sizeof(struct sockaddr_in);
+    } else { /* ipv6 */
+        return sizeof(struct sockaddr_in6);
+    }
+}
+
+
+void w_sockaddr_reset (struct sockaddr * saddr)
+{
+    if (saddr->sa_family == AF_INET) {
+        memset (saddr, 0, sizeof(struct sockaddr_in));
+        saddr->sa_family = AF_INET;
+    } else { /* ipv6 */
+        memset (saddr, 0, sizeof(struct sockaddr_in6));
+        saddr->sa_family = AF_INET6;
+    }
+}
+
+
+void w_sockaddr_set_port (struct sockaddr * saddr, int port)
+{
+    if (saddr->sa_family == AF_INET) {
+        ((struct sockaddr_in*)saddr)->sin_port = htons (port);
+    } else { /* ipv6 */
+        ((struct sockaddr_in6*)saddr)->sin6_port = htons (port);
+    }
+}
+
+
+int w_sockaddr_set_ip_from_str (struct sockaddr * saddr, const char * ipstr)
+{
+    int ret;
+    void * addr = w_sockaddr_get_addr (saddr);
+    ret = inet_pton (saddr->sa_family, ipstr, addr);
+    return ret; // 1=ok
+}
+
+// =============================================================================
+
 struct addrinfo * lookup_host (char * host, char * service, unsigned int port)
 {
+	// this is where everything about the connection is specified
+	// the resulting addrinfo will contain info according to the params specified here
 	struct addrinfo hints;
 	struct addrinfo *hostp;
 	char port_s[10];
 
 	memset (&hints, 0, sizeof(hints));
 	hints.ai_flags    = AI_CANONNAME;
-	hints.ai_family   = AF_INET;
+
+	if (use_ipv6) {
+		hints.ai_family = AF_INET6;
+	} else {
+		hints.ai_family = AF_INET;
+	}
 	hints.ai_socktype = SOCK_STREAM;
 
     if (port || (!service || !*service))
@@ -67,20 +171,22 @@ struct addrinfo * lookup_host (char * host, char * service, unsigned int port)
 	return hostp;
 }
 
+// =============================================================================
 
 unsigned int get_interface_info(int pfd, peer_t *sock)
 {
 	unsigned int size;
-	struct sockaddr_in saddr;
+	struct sockaddr * saddr = w_sockaddr_new (use_ipv6);
 
-	size = sizeof(saddr);
-	if (getsockname(pfd, (struct sockaddr *) &saddr, &size) < 0)
+	size = w_sockaddr_get_size (saddr);
+	if (getsockname(pfd, saddr, &size) < 0)
 		printerror(1 | ERR_SYSTEM, "-ERR", "can't get sockname, error= %s", strerror(errno));
 
-	copy_string(sock->ipnum, (char *) inet_ntoa(saddr.sin_addr), sizeof(sock->ipnum));
-	sock->port = ntohs(saddr.sin_port);
+	w_sockaddr_get_ip_str (saddr, sock->ipnum, sizeof(sock->ipnum));
+	sock->port = w_sockaddr_get_port (saddr);
 	copy_string(sock->name, sock->ipnum, sizeof(sock->name));
 
+	free (saddr);
 	return (sock->port);
 }
 
@@ -94,18 +200,23 @@ static void alarm_handler()
 int openip(char *host, unsigned int port, char *srcip, unsigned int srcport)
 {
 	int	socketd;
-	struct addrinfo *hostp;
+	struct addrinfo *hostp, *bhostp;
 
-	socketd = socket(AF_INET, SOCK_STREAM, 0);
-	if (socketd < 0)
+	hostp = lookup_host (host, NULL, port);
+	if (!hostp) {
+		return -1;
+	}
+
+	socketd = socket (hostp->ai_family, SOCK_STREAM, 0);
+	if (socketd < 0) {
+		freeaddrinfo (hostp);
 		return (-1);
-  
-  	/*
-	 * Enhancement to use a particular local interface and source port,
-	 * mentioned by Juergen Ilse, <ilse@asys-h.de>.
-	 */
+	}
+
 	if (srcip != NULL  &&  *srcip != 0)
 	{
+		/* Enhancement to use a particular local interface and source port,
+		 * mentioned by Juergen Ilse, <ilse@asys-h.de>. */
 		if (srcport != 0) {
 			int	one;
 			one = 1;
@@ -113,24 +224,22 @@ int openip(char *host, unsigned int port, char *srcip, unsigned int srcport)
 		}
  
  		/* Bind local socket to srcport and srcip */
-		hostp = lookup_host (srcip, NULL, srcport);
-		if (!hostp) {
+		bhostp = lookup_host (srcip, NULL, srcport);
+		if (!bhostp) {
 			printerror(1 | ERR_SYSTEM, "-ERR", "can't lookup %s", srcip);
-			exit (1);
-		}
-
-		if (bind(socketd, hostp->ai_addr, hostp->ai_addrlen)) {
-			printerror(1 | ERR_SYSTEM, "-ERR", "can't bind to %s:%u", srcip, srcport);
 			freeaddrinfo (hostp);
 			exit (1);
 		}
-		freeaddrinfo (hostp);
+
+		if (bind(socketd, bhostp->ai_addr, bhostp->ai_addrlen)) {
+			printerror(1 | ERR_SYSTEM, "-ERR", "can't bind to %s:%u", srcip, srcport);
+			freeaddrinfo (hostp);
+			freeaddrinfo (bhostp);
+			exit (1);
+		}
+		freeaddrinfo (bhostp);
 	}
 
-	hostp = lookup_host (host, NULL, port);
-	if (!hostp) {
-		return -1;
-	}
 	signal(SIGALRM, alarm_handler);
 	alarm(10);
 
@@ -186,12 +295,14 @@ unsigned int get_port(char *server, unsigned int def_port)
 
 int bind_to_port(char *interface, unsigned int port)
 {
-	struct sockaddr_in saddr;
+	struct sockaddr * saddr = w_sockaddr_new (use_ipv6);
 	int	sock;
 	struct addrinfo * ifp;
 
-	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+	sock = socket (saddr->sa_family, SOCK_STREAM, 0);
+	if (sock < 0) {
 		printerror(1 | ERR_SYSTEM, "-ERR", "can't create socket: %s", strerror(errno));
+		free (saddr);
 		exit (1);
 	} 
 	else {
@@ -199,32 +310,32 @@ int bind_to_port(char *interface, unsigned int port)
 		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 	}
 
-	memset(&saddr, 0, sizeof(saddr));
-	saddr.sin_family = AF_INET;
-	saddr.sin_port   = htons(port);
-	
-	if (interface == NULL  ||  *interface == 0)
-		interface = "0.0.0.0";
-	else {
+	if (interface && *interface)
+	{
 		ifp = lookup_host (interface, NULL, port);
 		if (ifp == NULL) {
 			printerror(1 | ERR_SYSTEM, "-ERR", "can't lookup %s", interface);
+			free (saddr);
 			exit (1);
 		}
-		memcpy (&saddr, ifp->ai_addr, ifp->ai_addrlen);
+		memcpy (saddr, ifp->ai_addr, w_sockaddr_get_size(saddr));
 		freeaddrinfo (ifp);
 	}
+	w_sockaddr_set_port (saddr, port);
 
-	if (bind(sock, (struct sockaddr *) &saddr, sizeof(saddr))) {
+	if (bind (sock, saddr, w_sockaddr_get_size(saddr))) {
 		printerror(1 | ERR_SYSTEM, "-ERR", "can't bind to %s:%u", interface, port);
+		free (saddr);
 		exit (1);
 	}
 
 	if (listen(sock, 5) < 0) {
 		printerror(1 | ERR_SYSTEM, "-ERR", "listen error: %s", strerror(errno));
+		free (saddr);
 		exit (1);
 	}
 
+	free (saddr);
 	return (sock);
 }
 

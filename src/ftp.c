@@ -123,20 +123,20 @@ ftpcmd_t cmdtab[] = {
 int get_client_info(ftp_t *x, int pfd)
 {
 	unsigned int size;
-	struct sockaddr_in saddr;
+	struct sockaddr * saddr = w_sockaddr_new (use_ipv6);
 	int ret;
 	*x->client.name = 0;
-	size = sizeof(saddr);
-	if (getpeername(pfd, (struct sockaddr *) &saddr, &size) < 0 )
+	size = w_sockaddr_get_size (saddr);
+	if (getpeername(pfd, saddr, &size) < 0 ) {
+		free (saddr);
 		return (-1);
-		
-	copy_string(x->client.ipnum, (char *) inet_ntoa(saddr.sin_addr), sizeof(x->client.ipnum));
+	}
+	w_sockaddr_get_ip_str (saddr, x->client.ipnum, sizeof(x->client.ipnum));
 
 	if (x->config->numeric_only == 1)
 		copy_string(x->client.name, x->client.ipnum, sizeof(x->client.name));
 	else {
-		ret = getnameinfo ((struct sockaddr*) &saddr, sizeof(saddr),
-		                   x->client.name, sizeof(x->client.name), NULL, 0, 0);
+		ret = getnameinfo (saddr, size, x->client.name, sizeof(x->client.name), NULL, 0, 0);
 		if (ret != 0) {
 			*(x->client.name) = 0; // error, make sure string is empty
 		}
@@ -144,6 +144,7 @@ int get_client_info(ftp_t *x, int pfd)
 
 	strlwr(x->client.name);
 
+	free (saddr);
 	return (0);
 }
 
@@ -274,22 +275,24 @@ int getc_fd(ftp_t *x, int fd)
 				if (x->ch.state == PORT_LISTEN) {
 					unsigned int adrlen;
 					int	sock;
-					struct sockaddr_in adr;
+					struct sockaddr * adr = w_sockaddr_new (use_ipv6);
 
 					earlyreported = 0;
-					adrlen = sizeof(struct sockaddr);
-					sock = accept(x->ch.active, (struct sockaddr *) &adr, &adrlen);
+					adrlen = w_sockaddr_get_size (adr);
+					sock = accept(x->ch.active, adr, &adrlen);
 					if (debug != 0)
 						fprintf (stderr, "accept() on socket\n");
 
 					if (sock < 0) {
 						printerror(1 | ERR_SYSTEM, "-ERR", "accept error: %s", strerror(errno));
+						free (adr);
 						exit (1);
 						}
 					else {
 						char	remote[80];
+						w_sockaddr_get_ip_str (adr, remote, sizeof(remote));
+						free (adr);
 
-						copy_string(remote, inet_ntoa(adr.sin_addr), sizeof(remote));
 						if (debug != 0)
 							fprintf (stderr, "connection from %s\n", remote);
 
@@ -1353,7 +1356,6 @@ int dologin(ftp_t *x)
 	int	c, i, rc, isredirected;
 	char	*p, word[80], line[300];
 	struct addrinfo *hostp;
-	struct sockaddr_in saddr;
 			
 	while (1) {
 		if (cfgets(x, line, sizeof(line)) == NULL)
@@ -1532,9 +1534,8 @@ int dologin(ftp_t *x)
 		printerror(1 | ERR_PROXY, "-ERR", "can't resolve hostname: %s", x->server.name);
 		exit (1);
 		}
-	memcpy (&saddr, hostp->ai_addr, hostp->ai_addrlen);
+	w_sockaddr_get_ip_str (hostp->ai_addr, x->server.ipnum, sizeof(x->server.ipnum));
 	freeaddrinfo (hostp);
-	copy_string(x->server.ipnum, inet_ntoa(saddr.sin_addr), sizeof(x->server.ipnum));
 
 	/*
 	 * Call the access control program to check if the proxy
@@ -1889,22 +1890,27 @@ int proxy_request(config_t *config)
 	if (x->config->redirmode != 0) {
 		int	rc;
 		socklen_t socksize;
-		struct sockaddr_in sock;
+		struct sockaddr * sock = w_sockaddr_new (use_ipv6);
+		char ipstr[80];
+		unsigned short sport;
 
-		socksize = sizeof(sock);
-		rc = getsockopt(0, SOL_IP, SO_ORIGINAL_DST, &sock, &socksize);
+		socksize = w_sockaddr_get_size (sock);
+
+		rc = getsockopt(0, SOL_IP, SO_ORIGINAL_DST, sock, &socksize);
+
+		w_sockaddr_get_ip_str (sock, ipstr, sizeof(ipstr));
+		sport = w_sockaddr_get_port (sock);
+		free (sock);
+
 		if (rc != 0)
 			;
-		else if (strcmp((char *) inet_ntoa(sock.sin_addr), x->i.ipnum) != 0  ||
-			 ntohs(sock.sin_port) != x->i.port) {
-
+		else if (strcmp(ipstr,x->i.ipnum) != 0  || sport != x->i.port) {
 			/*
 			 * Take the original server information if it's
 			 * a redirected request.
 			 */
-
-			copy_string(x->origdst.ipnum, (char *) inet_ntoa(sock.sin_addr), sizeof(x->origdst.ipnum));
-			x->origdst.port = ntohs(sock.sin_port);
+			copy_string(x->origdst.ipnum, ipstr, sizeof(x->origdst.ipnum));
+			x->origdst.port = sport;
 			setvar("ORIGDST_SERVER", x->origdst.ipnum);
 			setnumvar("ORIGDST_PORT", x->origdst.port);
 
