@@ -439,6 +439,10 @@ interface.
 .SH OPTIONS
 The following options are available:
 .TP
+\fB-6\fR
+IPv6 mode. The proxy will expect and use IPv6 addresses for all communication.
+Only the extended FTP modes EPSV and EPRT are allowed with IPv6. The proxy is in IPv4 mode by default.
+.TP
 \fB-a\fR \fIacp\fR
 specify an access control program that grants or denies access via
 \fIftp.proxy\fR.

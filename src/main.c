@@ -278,8 +278,11 @@ int main(int argc, char *argv[], char *envp[])
 	k = 1;
 	while (k < argc  &&  argv[k][0] == '-'  &&  argv[k][1] != 0) {
 		copy_string(option, argv[k++], sizeof(option));
-		for (i=1; (c = option[i]) != 0; i++) {
-			if (c == 'd') {
+		for (i=1; (c = option[i]) != 0; i++)
+		{
+			if (c == '6')
+				use_ipv6 = 1; /* ip-lib.c */
+			else if (c == 'd') {
 				if (debug == 1)
 					debug = 2;
 				else
@@ -417,6 +420,8 @@ int main(int argc, char *argv[], char *envp[])
 				 * to allow server-server transfers through the
 				 * proxy -- 31JAN02asg
 				 */
+
+
 
 				config->allow_anyremote = 1;
 				}
