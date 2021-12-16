@@ -172,6 +172,8 @@ int readconfig(config_t *config, char *filename, char *section)
 			config->allow_passwdblanks = get_yesno(&p, word, filename, lineno);
 		else if (strcmp(word, "extra-logging") == 0)
 			extralog = get_yesno(&p, word, filename, lineno);
+		else if (strcmp(word, "ipv6") == 0)
+			use_ipv6 = get_yesno(&p, word, filename, lineno);
 		else if (strcmp(word, "monitormode") == 0)
 			config->monitor = get_yesno(&p, word, filename, lineno);
 		else if (strcmp(word, "proxy-routing") == 0)

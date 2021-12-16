@@ -322,6 +322,10 @@ The following options can be set:
 \fBacp\fR \fI/path/to/acp\fR
 sets the path to the access control program (\fB-a\fR option).
 .TP
+\fBipv6\fR yes|no
+If enabled the proxy will expect and use IPv6 addresses for all communication.
+Only the extended FTP modes EPSV and EPRT are allowed with IPv6.
+.TP
 \fBallow-anyremote\fR yes|no
 if enabled \fIftp.proxy\fR does not check the remote's end in data
 connection, required for some bad multi-homed servers and FXP (\fB-y\fR
