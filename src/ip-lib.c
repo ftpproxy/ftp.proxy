@@ -284,6 +284,9 @@ unsigned int get_port(char *server, unsigned int def_port)
 	unsigned int port;
 	char	*p;
 
+	if (use_ipv6)
+		return def_port;
+
 	if ((p = strchr(server, ':')) == NULL)
 		return (def_port);
 
